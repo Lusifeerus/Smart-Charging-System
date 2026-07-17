@@ -1,0 +1,366 @@
+[
+  {
+    "id": "756a45bc3733b513",
+    "type": "tab",
+    "label": "PV Eco",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "d5dcd8d136b03b87",
+    "type": "function",
+    "z": "756a45bc3733b513",
+    "name": "Power Assembler",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/power_assembler.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste power_assembler.js\" });\nnode.warn(\n    \"'Power Assembler' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/power_assembler.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 260,
+    "wires": [
+      [
+        "118a1b82b7e1fdcd",
+        "dac8bd4af0e81def",
+        "00959507472ae092",
+        "520df9f233e9ac37"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/power_assembler.js`](NodeRed/Scripts/power_assembler.js) in the repo, not in this flow export.\n\n**To activate this node:** open `power_assembler.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "118a1b82b7e1fdcd",
+    "type": "function",
+    "z": "756a45bc3733b513",
+    "name": "Fast Tracker",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/fast_tracker.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste fast_tracker.js\" });\nnode.warn(\n    \"'Fast Tracker' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/fast_tracker.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 690,
+    "y": 300,
+    "wires": [
+      [
+        "84aad854ef1d0fc0"
+      ],
+      [
+        "84aad854ef1d0fc0"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/fast_tracker.js`](NodeRed/Scripts/fast_tracker.js) in the repo, not in this flow export.\n\n**To activate this node:** open `fast_tracker.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "498a73788cced00c",
+    "type": "function",
+    "z": "756a45bc3733b513",
+    "name": "Slow Planner",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/slow_planner.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste slow_planner.js\" });\nnode.warn(\n    \"'Slow Planner' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/slow_planner.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 450,
+    "y": 420,
+    "wires": [
+      [
+        "3119c4b26d75be38"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/slow_planner.js`](NodeRed/Scripts/slow_planner.js) in the repo, not in this flow export.\n\n**To activate this node:** open `slow_planner.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "dac8bd4af0e81def",
+    "type": "function",
+    "z": "756a45bc3733b513",
+    "name": "Status Publisher",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/pv_status_publisher.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste pv_status_publisher.js\" });\nnode.warn(\n    \"'Status Publisher' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/pv_status_publisher.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 220,
+    "wires": [
+      [
+        "d2d56007fcea90db"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/pv_status_publisher.js`](NodeRed/Scripts/pv_status_publisher.js) in the repo, not in this flow export.\n\n**To activate this node:** open `pv_status_publisher.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "d2d56007fcea90db",
+    "type": "mqtt out",
+    "z": "756a45bc3733b513",
+    "name": "",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "bfbfd2a91f67800e",
+    "x": 850,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "575119a75b86e049",
+    "type": "inject",
+    "z": "756a45bc3733b513",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "10",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 210,
+    "y": 260,
+    "wires": [
+      [
+        "d5dcd8d136b03b87"
+      ]
+    ]
+  },
+  {
+    "id": "5c8d9c6895dc21b5",
+    "type": "inject",
+    "z": "756a45bc3733b513",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "600",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 210,
+    "y": 420,
+    "wires": [
+      [
+        "498a73788cced00c"
+      ]
+    ]
+  },
+  {
+    "id": "84aad854ef1d0fc0",
+    "type": "http request",
+    "z": "756a45bc3733b513",
+    "name": "",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": false,
+    "url": "",
+    "persist": false,
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 930,
+    "y": 300,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "00959507472ae092",
+    "type": "function",
+    "z": "756a45bc3733b513",
+    "name": "CSV Logger",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/csv_logger.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste csv_logger.js\" });\nnode.warn(\n    \"'CSV Logger' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/csv_logger.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 690,
+    "y": 160,
+    "wires": [
+      [
+        "8cce47ad19e9c897"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/csv_logger.js`](NodeRed/Scripts/csv_logger.js) in the repo, not in this flow export.\n\n**To activate this node:** open `csv_logger.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "8cce47ad19e9c897",
+    "type": "file",
+    "z": "756a45bc3733b513",
+    "name": "",
+    "filename": "/data/pv_eco_v1_3_log.csv",
+    "filenameType": "str",
+    "appendNewline": true,
+    "createDir": false,
+    "overwriteFile": "false",
+    "encoding": "none",
+    "x": 900,
+    "y": 160,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "dca92370544450be",
+    "type": "function",
+    "z": "756a45bc3733b513",
+    "name": "Solcast Logger",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/solcast_logger.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste solcast_logger.js\" });\nnode.warn(\n    \"'Solcast Logger' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/solcast_logger.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 500,
+    "wires": [
+      [
+        "bf56ed5f1ff485a5"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/solcast_logger.js`](NodeRed/Scripts/solcast_logger.js) in the repo, not in this flow export.\n\n**To activate this node:** open `solcast_logger.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "bf56ed5f1ff485a5",
+    "type": "file",
+    "z": "756a45bc3733b513",
+    "name": "",
+    "filename": "/data/solcast_forecast_log.csv",
+    "filenameType": "str",
+    "appendNewline": true,
+    "createDir": false,
+    "overwriteFile": "false",
+    "encoding": "none",
+    "x": 930,
+    "y": 500,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "e14e3292de66d7a2",
+    "type": "inject",
+    "z": "756a45bc3733b513",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "1800",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 210,
+    "y": 500,
+    "wires": [
+      [
+        "dca92370544450be"
+      ]
+    ]
+  },
+  {
+    "id": "520df9f233e9ac37",
+    "type": "debug",
+    "z": "756a45bc3733b513",
+    "name": "Power Assembler",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 430,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "3119c4b26d75be38",
+    "type": "debug",
+    "z": "756a45bc3733b513",
+    "name": "Slow Planner",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 450,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "bfbfd2a91f67800e",
+    "type": "mqtt-broker",
+    "name": "",
+    "broker": "localhost",
+    "port": 1883,
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": 4,
+    "keepalive": 60,
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  }
+]

@@ -1,0 +1,96 @@
+# =============================================================================
+# EV Charging — Assignment Exclusivity (Phase 1, revised)
+# Add to automations (UI import or automations.yaml). Supersedes the
+# original version of this file.
+#
+# Guarantees one car is never assigned to both chargers — but resolves
+# the conflict by MIRRORING (swap), not clearing, whenever a genuine
+# swap partner exists. This is deliberately built around what the most
+# probable real-world trigger actually is: a family member noticing
+# their car is mapped to the wrong charger and fixing it — which is a
+# SWAP ("my car and the other car are on the wrong chargers"), not an
+# unassignment. The old "always clear the other side to None" behavior
+# made that routine action silently leave the other charger unassigned
+# — which, combined with a real car still plugged in there, used to
+# mean it started charging unconditionally with zero schedule and zero
+# dashboard visibility (see evaluator.js's guest-mode fail-safe fix,
+# which remains in place as the backstop for cases a swap can't cover:
+# an explicit "Not assigned" action, or displacing a car that has no
+# prior charger to swap back into).
+#
+# Resolution logic, per conflict:
+#   - The charger being newly assigned previously held a REAL car
+#     (Car 1 or Car 2, not None) → that displaced car SWAPS into the
+#     conflicting charger's old spot. Net effect: the two chargers'
+#     occupants exchange places.
+#   - The charger being newly assigned was previously UNASSIGNED (None)
+#     → there is no prior position to swap the displaced car into; it
+#     falls back to the original "clear to None" behavior. The fail-safe
+#     default (not the automatic-charging default this replaced) then
+#     applies — the displaced car simply stops until reassigned.
+#
+# Explicit "Not assigned" (writing "None" directly, e.g. via the card's
+# chooser) never triggers this automation at all — the first condition
+# below only matches assignment TO a real car. Unassigning was already,
+# and remains, a self-contained action that never touches the other
+# charger.
+#
+# Guarded against loops: every action here writes either a real car
+# value that doesn't match the ORIGINAL trigger's car (a swap moves the
+# displaced car to the OTHER charger, never re-creates the conflict) or
+# "None", which the trigger's own first condition excludes from
+# re-triggering.
+# =============================================================================
+
+automation:
+- id: ev_charger_assignment_exclusivity
+  alias: "EV: charger assignment exclusivity (swap on conflict)"
+  mode: queued
+  max: 4
+  triggers:
+    - trigger: state
+      entity_id: input_select.ev_charger1_car
+      id: c1
+    - trigger: state
+      entity_id: input_select.ev_charger2_car
+      id: c2
+  conditions:
+    # Only act on real car assignments (not None, not startup nulls) —
+    # this is also what keeps explicit "Not assigned" from ever
+    # reaching this automation at all.
+    - condition: template
+      value_template: >
+        {{ trigger.to_state.state in ['Car 1', 'Car 2'] }}
+    # ...and only when the other charger currently claims the same car
+    - condition: template
+      value_template: >
+        {% set other = 'input_select.ev_charger2_car'
+           if trigger.id == 'c1' else 'input_select.ev_charger1_car' %}
+        {{ states(other) == trigger.to_state.state }}
+  actions:
+    - variables:
+        other_entity: >
+          {{ 'input_select.ev_charger2_car'
+             if trigger.id == 'c1' else 'input_select.ev_charger1_car' }}
+        # What the JUST-CHANGED charger held immediately before this
+        # change — i.e. the car that should now take the displaced car's
+        # old spot, if it's a real car. If the just-changed charger was
+        # previously unassigned, there is no swap partner.
+        #
+        # | string on BOTH templates below: HA's template engine
+        # auto-converts a render that's exactly the text "None" into the
+        # Python NoneType (the same convenience behaviour that turns
+        # "True"/"False"/numbers into native types). Since the whole
+        # point here is producing the literal STRING "None" — it's a
+        # real input_select option value, not a sentinel — that
+        # "convenience" silently breaks the service call downstream
+        # (input_select.select_option requires option to be a string).
+        # Confirmed live: this exact failure happened without the filter.
+        previous_occupant: >
+          {{ (trigger.from_state.state if trigger.from_state is not none else 'None') | string }}
+    - action: input_select.select_option
+      target:
+        entity_id: "{{ other_entity }}"
+      data:
+        option: >
+          {{ (previous_occupant if previous_occupant in ['Car 1', 'Car 2'] else 'None') | string }}

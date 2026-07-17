@@ -1,0 +1,78 @@
+# =============================================================================
+# EV Charging — Strategy & Boost Helpers (Phase 2)
+# Add alongside ev_helpers.yaml / ev_mapping_helpers.yaml.
+#
+# Per-car strategy is the USER-FACING intent ("charge this car from PV
+# surplus"). The existing global input_select.ev_charging_strategy becomes
+# DERIVED — written only by pyscript (ev_strategy.py), never by the user:
+#
+#   global = pv_eco  iff  some car has strategy pv_eco
+#                         AND that car is assigned to a PV-capable charger
+#                         AND that car is not currently boosting
+#   otherwise fast
+#
+# The PV Eco flow keeps reading the global helper unchanged (zero Node-RED
+# changes on the PV side).
+#
+# Boost = temporary full-power charging for one car:
+#   - ends at target SoC OR after the configured duration, whichever first
+#   - target follows the car's current mode (minimal/normal/trip)
+#   - implemented as a per-car flag the Evaluator ORs with the allowed_map,
+#     so the OTHER car's price schedule is never affected and load
+#     balancing stays fully active
+# =============================================================================
+
+input_select:
+
+  ev_car1_strategy:
+    name: EV Car 1 Strategy
+    options:
+      - "fast"
+      - "pv_eco"
+    initial: "fast"
+    icon: mdi:strategy
+  ev_car2_strategy:
+    name: EV Car 2 Strategy
+    options:
+      - "fast"
+      - "pv_eco"
+    initial: "fast"
+    icon: mdi:strategy
+
+input_boolean:
+
+  # Authoritative boost flags — read by the Node-RED Evaluator.
+  # Set/cleared ONLY by pyscript (ev_boost_start / ev_boost_cancel / loop).
+  ev_car1_boost:
+    name: EV Car 1 Boost
+    initial: off
+    icon: mdi:flash
+  ev_car2_boost:
+    name: EV Car 2 Boost
+    initial: off
+    icon: mdi:flash
+
+input_datetime:
+
+  # Boost end time — display + timeout condition. Managed by pyscript.
+  ev_car1_boost_until:
+    name: EV Car 1 Boost Until
+    has_date: true
+    has_time: true
+    icon: mdi:timer-sand
+  ev_car2_boost_until:
+    name: EV Car 2 Boost Until
+    has_date: true
+    has_time: true
+    icon: mdi:timer-sand
+
+input_number:
+
+  ev_boost_duration_hours:
+    name: EV Boost Duration
+    initial: 3
+    min: 0.5
+    max: 12
+    step: 0.5
+    unit_of_measurement: "h"
+    icon: mdi:timer-cog-outline

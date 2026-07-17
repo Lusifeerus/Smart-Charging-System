@@ -1,0 +1,112 @@
+template:
+  # Nord Pool
+  - triggers:
+      - trigger: time_pattern
+        minutes: /1
+      - trigger: homeassistant
+        event: start
+
+    actions:
+      - action: nordpool.get_prices_for_date
+        data:
+          config_entry: 01K7456C7PK7NVTEEY5J5837VB
+          date: "{{ (now().date() - timedelta(days=1)) }}"
+          areas: FI
+          currency: EUR
+        response_variable: yesterday_price
+
+      - action: nordpool.get_prices_for_date
+        data:
+          config_entry: 01K7456C7PK7NVTEEY5J5837VB
+          date: "{{ now().date() }}"
+          areas: FI
+          currency: EUR
+        response_variable: today_price
+
+      - action: nordpool.get_prices_for_date
+        data:
+          config_entry: 01K7456C7PK7NVTEEY5J5837VB
+          date: "{{ now().date() + timedelta(days=1) }}"
+          areas: FI
+          currency: EUR
+        response_variable: tomorrow_price
+
+    sensor:
+      - name: Nordpool Prices
+        unique_id: nordpool_prices
+        unit_of_measurement: "snt/kWh"
+        icon: mdi:cash
+        state: >
+          {%- set region = (this.attributes.get('region', 'FI') | string) -%}
+          {%- set tax = (this.attributes.get('tax', 1.0) | float) -%}
+          {%- set additional_cost = (this.attributes.get('additional_cost', 0.0) | float) -%}
+
+          {% if (today_price is mapping) and (tomorrow_price is mapping) %}
+            {% set data = namespace(prices=[]) %}
+            {% for state in today_price[region] %}
+              {% set data.prices = data.prices + [(((state.price/10 | float) * tax + additional_cost)) | round(3, default=0)] %}
+            {% endfor %}
+            {% for state in tomorrow_price[region] %}
+              {% set data.prices = data.prices + [(((state.price/10 | float) * tax + additional_cost)) | round(3, default=0)] %}
+            {% endfor %}
+            {{min(data.prices)}}
+          {% else %}
+            unavailable
+          {% endif %}
+
+        attributes:
+          tomorrow_valid: >
+            {%- set region = (this.attributes.get('region', 'FI') | string) -%}
+            {%- if (tomorrow_price is mapping) %}
+              {%- if tomorrow_price[region] | list | count > 0 -%}
+                {{ true | bool }}
+              {%- else %}
+                {{ false | bool }}
+              {%- endif %}
+            {%- else %}
+              {{ false | bool }}
+            {%- endif %}
+
+          data: >
+            {%- set region = (this.attributes.get('region', 'FI') | string) -%}
+            {%- set tax = (this.attributes.get('tax', 1.0) | float) -%}
+            {%- set additional_cost = (this.attributes.get('additional_cost', 0.0) | float) -%}
+
+            {% set data = namespace(prices=[]) %}
+
+            {# Include the last 4 slots of yesterday (00:00-01:00 local time) #}
+            {# These are the final 4 entries of yesterday's 96-slot array     #}
+            {% if (yesterday_price is mapping) and (yesterday_price[region] | list | count >= 4) %}
+              {% set yesterday_slots = yesterday_price[region] | list %}
+              {% set tail_start = (yesterday_slots | count) - 4 %}
+              {% for i in range(tail_start, yesterday_slots | count) %}
+                {% set state = yesterday_slots[i] %}
+                {% set local_start = as_datetime(state.start).astimezone().strftime('%Y-%m-%d %H:%M:%S') %}
+                {% set local_end = as_datetime(state.end).astimezone().strftime('%Y-%m-%d %H:%M:%S') %}
+                {% set data.prices = data.prices + [{'start': local_start, 'end': local_end, 'price': (((state.price/10 | float) * tax + additional_cost)) | round(3, default=0)}] %}
+              {% endfor %}
+            {% endif %}
+
+            {# Today's prices (01:00 today to 01:00 tomorrow) #}
+            {% if (today_price is mapping) %}
+              {% for state in today_price[region] %}
+                {% set local_start = as_datetime(state.start).astimezone().strftime('%Y-%m-%d %H:%M:%S') %}
+                {% set local_end = as_datetime(state.end).astimezone().strftime('%Y-%m-%d %H:%M:%S') %}
+                {% set data.prices = data.prices + [{'start': local_start, 'end': local_end, 'price': (((state.price/10 | float) * tax + additional_cost)) | round(3, default=0)}] %}
+              {% endfor %}
+            {% endif %}
+
+            {# Tomorrow's prices when available (after ~14:00) #}
+            {% if (tomorrow_price is mapping) and (tomorrow_price[region] | list | count > 0) %}
+              {% for state in tomorrow_price[region] %}
+                {% set local_start = as_datetime(state.start).astimezone().strftime('%Y-%m-%d %H:%M:%S') %}
+                {% set local_end = as_datetime(state.end).astimezone().strftime('%Y-%m-%d %H:%M:%S') %}
+                {% set data.prices = data.prices + [{'start': local_start, 'end': local_end, 'price': (((state.price/10 | float) * tax + additional_cost)) | round(3, default=0)}] %}
+              {% endfor %}
+            {% endif %}
+
+            {{ data.prices }}
+
+          tax: 1.255
+          additional_cost: 0
+          region: FI

@@ -1,0 +1,18 @@
+# =============================================================================
+# EV Charging — go-e Phase Switch Command
+# Add to the package alongside the other ev_*.yaml files.
+#
+# Called by pyscript (ev_strategy.py) on derived-strategy transitions and
+# at startup:  psm 1 = 1-phase (PV Eco surplus tracking),
+#              psm 2 = 3-phase (fast / boost full power).
+#
+# The go-e handles a psm change during an active session internally
+# (brief pause, contactor switch, resume) — no frc sequencing needed
+# from our side.
+# =============================================================================
+
+rest_command:
+  goe_set_psm:
+    url: "http://192.168.1.XX/api/set?psm={{ psm }}"  # CHANGE ME: your go-e IP
+    method: GET
+    timeout: 10

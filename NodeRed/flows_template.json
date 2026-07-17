@@ -1,0 +1,1923 @@
+[
+  {
+    "id": "04b80678578a6169",
+    "type": "tab",
+    "label": "EV Charging",
+    "disabled": false,
+    "info": "",
+    "env": []
+  },
+  {
+    "id": "8424e69db9b7b04e",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Coordinator",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/coordinator.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste coordinator.js\" });\nnode.warn(\n    \"'Coordinator' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/coordinator.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 530,
+    "y": 1220,
+    "wires": [
+      [
+        "e58a925a2454662f",
+        "e9415c94f107871c"
+      ],
+      [
+        "af93e6bd7d682f78",
+        "9d3c34e706257284"
+      ],
+      [
+        "72e2fdda8ad3153c",
+        "7fa598a6082538e0"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/coordinator.js`](NodeRed/Scripts/coordinator.js) in the repo, not in this flow export.\n\n**To activate this node:** open `coordinator.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "72e2fdda8ad3153c",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Evaluator",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/evaluator.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste evaluator.js\" });\nnode.warn(\n    \"'Evaluator' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/evaluator.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 540,
+    "y": 1520,
+    "wires": [
+      [
+        "b25d53833aa14e03",
+        "67d324e16626926c",
+        "960e8914c9663a90"
+      ],
+      [
+        "c82d4321af7dbea4",
+        "a65271a9b880ec35"
+      ],
+      [
+        "cdbaaddb0190858e"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/evaluator.js`](NodeRed/Scripts/evaluator.js) in the repo, not in this flow export.\n\n**To activate this node:** open `evaluator.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "42e5c84d44a58856",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Planner Car 1",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/planner_car1.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste planner_car1.js\" });\nnode.warn(\n    \"'Planner Car 1' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/planner_car1.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 520,
+    "y": 440,
+    "wires": [
+      [
+        "02b18d4b224f0672",
+        "5269dee913633156"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/planner_car1.js`](NodeRed/Scripts/planner_car1.js) in the repo, not in this flow export.\n\n**To activate this node:** open `planner_car1.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "74c490fd2e2a0b40",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Nordpool Parser",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/parser.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste parser.js\" });\nnode.warn(\n    \"'Nordpool Parser' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/parser.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 520,
+    "y": 160,
+    "wires": [
+      [
+        "4fa874bbe4725587",
+        "42e5c84d44a58856",
+        "59ec25475f211f08"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/parser.js`](NodeRed/Scripts/parser.js) in the repo, not in this flow export.\n\n**To activate this node:** open `parser.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "497e3ce3f578f387",
+    "type": "server-state-changed",
+    "z": "04b80678578a6169",
+    "name": "Nordpool Prices",
+    "server": "628be9abfc84199d",
+    "version": 6,
+    "outputs": 1,
+    "exposeAsEntityConfig": "",
+    "entities": {
+      "entity": [
+        "sensor.nordpool_prices"
+      ],
+      "substring": [],
+      "regex": []
+    },
+    "outputInitially": false,
+    "stateType": "str",
+    "ifState": "",
+    "ifStateType": "str",
+    "ifStateOperator": "is",
+    "outputOnlyOnStateChange": true,
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "ignorePrevStateNull": false,
+    "ignorePrevStateUnknown": false,
+    "ignorePrevStateUnavailable": false,
+    "ignoreCurrentStateUnknown": false,
+    "ignoreCurrentStateUnavailable": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "string",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "eventData"
+      },
+      {
+        "property": "topic",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "triggerId"
+      }
+    ],
+    "x": 260,
+    "y": 160,
+    "wires": [
+      [
+        "74c490fd2e2a0b40"
+      ]
+    ]
+  },
+  {
+    "id": "4fa874bbe4725587",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Slots (future)",
+    "active": false,
+    "tosidebar": true,
+    "complete": "payload",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 770,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "638c579b796f07de",
+    "type": "inject",
+    "z": "04b80678578a6169",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "3600",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 270,
+    "y": 100,
+    "wires": [
+      [
+        "74c490fd2e2a0b40"
+      ]
+    ]
+  },
+  {
+    "id": "59ec25475f211f08",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Planner Car 2",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/planner_car2.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste planner_car2.js\" });\nnode.warn(\n    \"'Planner Car 2' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/planner_car2.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 520,
+    "y": 520,
+    "wires": [
+      [
+        "b4b5c70e2c1eea11",
+        "5269dee913633156"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/planner_car2.js`](NodeRed/Scripts/planner_car2.js) in the repo, not in this flow export.\n\n**To activate this node:** open `planner_car2.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "02b18d4b224f0672",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Car1 schedule",
+    "active": false,
+    "tosidebar": true,
+    "complete": "payload",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 780,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "b4b5c70e2c1eea11",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Car2 schedule",
+    "active": false,
+    "complete": "payload",
+    "x": 780,
+    "y": 540,
+    "wires": []
+  },
+  {
+    "id": "b25d53833aa14e03",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Evaluator out 1",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 780,
+    "y": 1400,
+    "wires": []
+  },
+  {
+    "id": "c82d4321af7dbea4",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Evaluator out 2",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 780,
+    "y": 1660,
+    "wires": []
+  },
+  {
+    "id": "960e8914c9663a90",
+    "type": "http request",
+    "z": "04b80678578a6169",
+    "name": "",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": false,
+    "url": "",
+    "persist": false,
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1230,
+    "y": 1480,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "e58a925a2454662f",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "url c1",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "url",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 750,
+    "y": 1140,
+    "wires": []
+  },
+  {
+    "id": "af93e6bd7d682f78",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "url c2",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "url",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 750,
+    "y": 1320,
+    "wires": []
+  },
+  {
+    "id": "e9415c94f107871c",
+    "type": "http request",
+    "z": "04b80678578a6169",
+    "name": "",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": false,
+    "url": "",
+    "persist": false,
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1070,
+    "y": 1180,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "8a908f30ecbb9ed1",
+    "type": "server-state-changed",
+    "z": "04b80678578a6169",
+    "name": "Car1 Mode",
+    "server": "628be9abfc84199d",
+    "version": 6,
+    "outputs": 1,
+    "exposeAsEntityConfig": "",
+    "entities": {
+      "entity": [
+        "input_select.ev_car1_mode"
+      ],
+      "substring": [],
+      "regex": []
+    },
+    "outputInitially": false,
+    "stateType": "str",
+    "ifState": "",
+    "ifStateType": "str",
+    "ifStateOperator": "is",
+    "outputOnlyOnStateChange": true,
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "ignorePrevStateNull": false,
+    "ignorePrevStateUnknown": false,
+    "ignorePrevStateUnavailable": false,
+    "ignoreCurrentStateUnknown": false,
+    "ignoreCurrentStateUnavailable": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "string",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "eventData"
+      },
+      {
+        "property": "topic",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "triggerId"
+      }
+    ],
+    "x": 280,
+    "y": 500,
+    "wires": [
+      [
+        "42e5c84d44a58856"
+      ]
+    ]
+  },
+  {
+    "id": "c821e5e7dea45c3b",
+    "type": "server-state-changed",
+    "z": "04b80678578a6169",
+    "name": "Car2 Mode",
+    "server": "628be9abfc84199d",
+    "version": 6,
+    "outputs": 1,
+    "exposeAsEntityConfig": "",
+    "entities": {
+      "entity": [
+        "input_select.ev_car2_mode"
+      ],
+      "substring": [],
+      "regex": []
+    },
+    "outputInitially": false,
+    "stateType": "str",
+    "ifState": "",
+    "ifStateType": "str",
+    "ifStateOperator": "is",
+    "outputOnlyOnStateChange": true,
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "ignorePrevStateNull": false,
+    "ignorePrevStateUnknown": false,
+    "ignorePrevStateUnavailable": false,
+    "ignoreCurrentStateUnknown": false,
+    "ignoreCurrentStateUnavailable": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "string",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "eventData"
+      },
+      {
+        "property": "topic",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "triggerId"
+      }
+    ],
+    "x": 280,
+    "y": 560,
+    "wires": [
+      [
+        "59ec25475f211f08"
+      ]
+    ]
+  },
+  {
+    "id": "1d7aee5c17d5ec28",
+    "type": "server-state-changed",
+    "z": "04b80678578a6169",
+    "name": "Super Cheap Threshold",
+    "server": "628be9abfc84199d",
+    "version": 6,
+    "outputs": 1,
+    "exposeAsEntityConfig": "",
+    "entities": {
+      "entity": [
+        "input_number.ev_super_cheap_threshold"
+      ],
+      "substring": [],
+      "regex": []
+    },
+    "outputInitially": false,
+    "stateType": "str",
+    "ifState": "",
+    "ifStateType": "str",
+    "ifStateOperator": "is",
+    "outputOnlyOnStateChange": true,
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "ignorePrevStateNull": false,
+    "ignorePrevStateUnknown": false,
+    "ignorePrevStateUnavailable": false,
+    "ignoreCurrentStateUnknown": false,
+    "ignoreCurrentStateUnavailable": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "string",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "eventData"
+      },
+      {
+        "property": "topic",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "triggerId"
+      }
+    ],
+    "x": 240,
+    "y": 740,
+    "wires": [
+      [
+        "42e5c84d44a58856",
+        "59ec25475f211f08"
+      ]
+    ]
+  },
+  {
+    "id": "933ebf87d287c3f0",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "MQTT Discovery",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/mqtt_discovery.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste mqtt_discovery.js\" });\nnode.warn(\n    \"'MQTT Discovery' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/mqtt_discovery.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 510,
+    "y": 260,
+    "wires": [
+      [
+        "a4ba69e6422db98e"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/mqtt_discovery.js`](NodeRed/Scripts/mqtt_discovery.js) in the repo, not in this flow export.\n\n**To activate this node:** open `mqtt_discovery.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "8612b71a7fd53ffd",
+    "type": "inject",
+    "z": "04b80678578a6169",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "5",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 270,
+    "y": 260,
+    "wires": [
+      [
+        "933ebf87d287c3f0",
+        "92feb51f074bbeb8"
+      ]
+    ]
+  },
+  {
+    "id": "a4ba69e6422db98e",
+    "type": "mqtt out",
+    "z": "04b80678578a6169",
+    "name": "",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "bfbfd2a91f67800e",
+    "x": 750,
+    "y": 260,
+    "wires": []
+  },
+  {
+    "id": "3b79d80c585585f7",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Slots Decoder",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/debug_slots.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste debug_slots.js\" });\nnode.warn(\n    \"'Slots Decoder' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/debug_slots.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 900,
+    "y": 480,
+    "wires": [
+      [
+        "04dbba79aacef875",
+        "e24f5d64f27e4834"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/debug_slots.js`](NodeRed/Scripts/debug_slots.js) in the repo, not in this flow export.\n\n**To activate this node:** open `debug_slots.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "04dbba79aacef875",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Allowed Slots",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1160,
+    "y": 540,
+    "wires": []
+  },
+  {
+    "id": "e24f5d64f27e4834",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "HA Formatter",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/ha_formatter.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste ha_formatter.js\" });\nnode.warn(\n    \"'HA Formatter' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/ha_formatter.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1160,
+    "y": 480,
+    "wires": [
+      [
+        "8bf752d7fba27568",
+        "15b8c59712a919cf"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/ha_formatter.js`](NodeRed/Scripts/ha_formatter.js) in the repo, not in this flow export.\n\n**To activate this node:** open `ha_formatter.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "8bf752d7fba27568",
+    "type": "mqtt out",
+    "z": "04b80678578a6169",
+    "name": "",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "bfbfd2a91f67800e",
+    "x": 1390,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "15b8c59712a919cf",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "HA Sensor",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1410,
+    "y": 540,
+    "wires": []
+  },
+  {
+    "id": "5269dee913633156",
+    "type": "join",
+    "z": "04b80678578a6169",
+    "name": "",
+    "mode": "custom",
+    "build": "array",
+    "property": "payload",
+    "propertyType": "msg",
+    "key": "topic",
+    "joiner": "\\n",
+    "joinerType": "str",
+    "useparts": false,
+    "accumulate": false,
+    "timeout": "3",
+    "count": "2",
+    "reduceRight": false,
+    "reduceExp": "",
+    "reduceInit": "",
+    "reduceInitType": "",
+    "reduceFixup": "",
+    "x": 750,
+    "y": 480,
+    "wires": [
+      [
+        "3b79d80c585585f7"
+      ]
+    ]
+  },
+  {
+    "id": "3b8385fb9d3a1d9a",
+    "type": "api-current-state",
+    "z": "04b80678578a6169",
+    "name": "L1 I (A)",
+    "server": "628be9abfc84199d",
+    "version": 3,
+    "outputs": 1,
+    "halt_if": "",
+    "halt_if_type": "str",
+    "halt_if_compare": "is",
+    "entity_id": "sensor.p1_meter_current_phase_1",
+    "state_type": "str",
+    "blockInputOverrides": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "entity"
+      }
+    ],
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "override_topic": false,
+    "state_location": "payload",
+    "override_payload": "msg",
+    "entity_location": "data",
+    "override_data": "msg",
+    "x": 540,
+    "y": 940,
+    "wires": [
+      [
+        "56f9e0a0110fc2b8"
+      ]
+    ]
+  },
+  {
+    "id": "a267f27e5353f18b",
+    "type": "api-current-state",
+    "z": "04b80678578a6169",
+    "name": "L2 I (A)",
+    "server": "628be9abfc84199d",
+    "version": 3,
+    "outputs": 1,
+    "halt_if": "",
+    "halt_if_type": "str",
+    "halt_if_compare": "is",
+    "entity_id": "sensor.p1_meter_current_phase_2",
+    "state_type": "str",
+    "blockInputOverrides": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "entity"
+      }
+    ],
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "override_topic": false,
+    "state_location": "payload",
+    "override_payload": "msg",
+    "entity_location": "data",
+    "override_data": "msg",
+    "x": 540,
+    "y": 1000,
+    "wires": [
+      [
+        "56f9e0a0110fc2b8"
+      ]
+    ]
+  },
+  {
+    "id": "8e23ba2b02a17829",
+    "type": "api-current-state",
+    "z": "04b80678578a6169",
+    "name": "L3 I (A)",
+    "server": "628be9abfc84199d",
+    "version": 3,
+    "outputs": 1,
+    "halt_if": "",
+    "halt_if_type": "str",
+    "halt_if_compare": "is",
+    "entity_id": "sensor.p1_meter_current_phase_3",
+    "state_type": "str",
+    "blockInputOverrides": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "entity"
+      }
+    ],
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "override_topic": false,
+    "state_location": "payload",
+    "override_payload": "msg",
+    "entity_location": "data",
+    "override_data": "msg",
+    "x": 540,
+    "y": 1060,
+    "wires": [
+      [
+        "56f9e0a0110fc2b8"
+      ]
+    ]
+  },
+  {
+    "id": "56f9e0a0110fc2b8",
+    "type": "join",
+    "z": "04b80678578a6169",
+    "name": "Grid Current",
+    "mode": "custom",
+    "build": "array",
+    "property": "payload",
+    "propertyType": "msg",
+    "key": "topic",
+    "joiner": "\\n",
+    "joinerType": "str",
+    "useparts": false,
+    "accumulate": false,
+    "timeout": "2",
+    "count": "3",
+    "reduceRight": false,
+    "reduceExp": "",
+    "reduceInit": "",
+    "reduceInitType": "",
+    "reduceFixup": "",
+    "x": 780,
+    "y": 1000,
+    "wires": [
+      [
+        "fe7e4ec74b063e47"
+      ]
+    ]
+  },
+  {
+    "id": "fe7e4ec74b063e47",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "MaxAmpsGrid",
+    "func": "let maxValue = 0;\nmaxValue = Math.max(...msg.payload);\nmsg.payload = {};\nmsg.payload = maxValue;\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 940,
+    "wires": [
+      [
+        "13c6e5921e58ac51"
+      ]
+    ],
+    "info": "Determine which of the phases has the biggest load and return that number for future calculations."
+  },
+  {
+    "id": "43948e27467bb416",
+    "type": "http request",
+    "z": "04b80678578a6169",
+    "name": "HTTP GET work_state",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://192.168.1.YY/rpc/Enum.GetStatus?owner=%22service:0%22&role=%22work_state%22",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 500,
+    "y": 880,
+    "wires": [
+      [
+        "bebf591c4c7a077e"
+      ]
+    ]
+  },
+  {
+    "id": "8706a627e91ce21b",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Assembler",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/assembler.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste assembler.js\" });\nnode.warn(\n    \"'Assembler' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/assembler.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1530,
+    "y": 880,
+    "wires": [
+      [
+        "3a142b87279dbedd",
+        "082c57a6c92ce40d"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/assembler.js`](NodeRed/Scripts/assembler.js) in the repo, not in this flow export.\n\n**To activate this node:** open `assembler.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "4c446c08bb8da80b",
+    "type": "join",
+    "z": "04b80678578a6169",
+    "name": "",
+    "mode": "custom",
+    "build": "object",
+    "property": "payload",
+    "propertyType": "msg",
+    "key": "topic",
+    "joiner": "\\n",
+    "joinerType": "str",
+    "useparts": false,
+    "accumulate": false,
+    "timeout": "10",
+    "count": "3",
+    "reduceRight": false,
+    "reduceExp": "",
+    "reduceInit": "",
+    "reduceInitType": "",
+    "reduceFixup": "",
+    "x": 1390,
+    "y": 880,
+    "wires": [
+      [
+        "8706a627e91ce21b"
+      ]
+    ]
+  },
+  {
+    "id": "3a142b87279dbedd",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Coordinator Input",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1550,
+    "y": 820,
+    "wires": []
+  },
+  {
+    "id": "2d911332920fd717",
+    "type": "change",
+    "z": "04b80678578a6169",
+    "name": "c1",
+    "rules": [
+      {
+        "t": "set",
+        "p": "topic",
+        "pt": "msg",
+        "to": "c1",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 1190,
+    "y": 820,
+    "wires": [
+      [
+        "4c446c08bb8da80b",
+        "eff920f2dd403cf6"
+      ]
+    ]
+  },
+  {
+    "id": "13c6e5921e58ac51",
+    "type": "change",
+    "z": "04b80678578a6169",
+    "name": "grid",
+    "rules": [
+      {
+        "t": "set",
+        "p": "topic",
+        "pt": "msg",
+        "to": "grid",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 1190,
+    "y": 940,
+    "wires": [
+      [
+        "4c446c08bb8da80b",
+        "eff920f2dd403cf6"
+      ]
+    ]
+  },
+  {
+    "id": "6bda6ff0552ff7a2",
+    "type": "http request",
+    "z": "04b80678578a6169",
+    "name": "",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://192.168.1.XX/api/status?filter=lmo,amp,frc,car,err",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 530,
+    "y": 820,
+    "wires": [
+      [
+        "2d911332920fd717"
+      ]
+    ]
+  },
+  {
+    "id": "bdad2b3b902461f9",
+    "type": "server-state-changed",
+    "z": "04b80678578a6169",
+    "name": "Car1 Deadline",
+    "server": "628be9abfc84199d",
+    "version": 6,
+    "outputs": 1,
+    "exposeAsEntityConfig": "",
+    "entities": {
+      "entity": [
+        "input_text.ev_car1_deadline_time"
+      ],
+      "substring": [],
+      "regex": []
+    },
+    "outputInitially": false,
+    "stateType": "str",
+    "ifState": "",
+    "ifStateType": "str",
+    "ifStateOperator": "is",
+    "outputOnlyOnStateChange": true,
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "ignorePrevStateNull": false,
+    "ignorePrevStateUnknown": false,
+    "ignorePrevStateUnavailable": false,
+    "ignoreCurrentStateUnknown": false,
+    "ignoreCurrentStateUnavailable": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "string",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "eventData"
+      },
+      {
+        "property": "topic",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "triggerId"
+      }
+    ],
+    "x": 270,
+    "y": 620,
+    "wires": [
+      [
+        "42e5c84d44a58856"
+      ]
+    ]
+  },
+  {
+    "id": "527eb2fd2331021b",
+    "type": "server-state-changed",
+    "z": "04b80678578a6169",
+    "name": "Car2 Deadline",
+    "server": "628be9abfc84199d",
+    "version": 6,
+    "outputs": 1,
+    "exposeAsEntityConfig": "",
+    "entities": {
+      "entity": [
+        "input_text.ev_car2_deadline_time"
+      ],
+      "substring": [],
+      "regex": []
+    },
+    "outputInitially": false,
+    "stateType": "str",
+    "ifState": "",
+    "ifStateType": "str",
+    "ifStateOperator": "is",
+    "outputOnlyOnStateChange": true,
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "ignorePrevStateNull": false,
+    "ignorePrevStateUnknown": false,
+    "ignorePrevStateUnavailable": false,
+    "ignoreCurrentStateUnknown": false,
+    "ignoreCurrentStateUnavailable": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "string",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "eventData"
+      },
+      {
+        "property": "topic",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "triggerId"
+      }
+    ],
+    "x": 270,
+    "y": 680,
+    "wires": [
+      [
+        "59ec25475f211f08"
+      ]
+    ]
+  },
+  {
+    "id": "082c57a6c92ce40d",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "LB Gate",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/lb_gate.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste lb_gate.js\" });\nnode.warn(\n    \"'LB Gate' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/lb_gate.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 280,
+    "y": 1220,
+    "wires": [
+      [
+        "8424e69db9b7b04e"
+      ],
+      [
+        "72e2fdda8ad3153c"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/lb_gate.js`](NodeRed/Scripts/lb_gate.js) in the repo, not in this flow export.\n\n**To activate this node:** open `lb_gate.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "67d324e16626926c",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "url c1",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "url",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 750,
+    "y": 1440,
+    "wires": []
+  },
+  {
+    "id": "38ea7bafaef71a2d",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "url c2",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "url",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 750,
+    "y": 1620,
+    "wires": []
+  },
+  {
+    "id": "9d3c34e706257284",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Shelly Output Handler",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/shelly_output_amp.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste shelly_output_amp.js\" });\nnode.warn(\n    \"'Shelly Output Handler' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/shelly_output_amp.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 800,
+    "y": 1260,
+    "wires": [
+      [
+        "af93e6bd7d682f78",
+        "97f4ab0ac3573f9c"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/shelly_output_amp.js`](NodeRed/Scripts/shelly_output_amp.js) in the repo, not in this flow export.\n\n**To activate this node:** open `shelly_output_amp.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "a65271a9b880ec35",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Shelly frc Output Handler",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/shelly_output_frc.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste shelly_output_frc.js\" });\nnode.warn(\n    \"'Shelly frc Output Handler' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/shelly_output_frc.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 810,
+    "y": 1560,
+    "wires": [
+      [
+        "38ea7bafaef71a2d",
+        "63f3d0ac79d1239a"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/shelly_output_frc.js`](NodeRed/Scripts/shelly_output_frc.js) in the repo, not in this flow export.\n\n**To activate this node:** open `shelly_output_frc.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "bebf591c4c7a077e",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Shelly Assembler",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/shelly_assembler.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste shelly_assembler.js\" });\nnode.warn(\n    \"'Shelly Assembler' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/shelly_assembler.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1150,
+    "y": 880,
+    "wires": [
+      [
+        "4c446c08bb8da80b",
+        "eff920f2dd403cf6"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/shelly_assembler.js`](NodeRed/Scripts/shelly_assembler.js) in the repo, not in this flow export.\n\n**To activate this node:** open `shelly_assembler.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "97f4ab0ac3573f9c",
+    "type": "http request",
+    "z": "04b80678578a6169",
+    "name": "",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": false,
+    "url": "",
+    "persist": false,
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1070,
+    "y": 1260,
+    "wires": [
+      [
+        "5738f6da35306bcc"
+      ]
+    ]
+  },
+  {
+    "id": "b8940c9b50e1b056",
+    "type": "http request",
+    "z": "04b80678578a6169",
+    "name": "",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": false,
+    "url": "",
+    "persist": false,
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1230,
+    "y": 1560,
+    "wires": [
+      [
+        "25916ffe707971c8"
+      ]
+    ]
+  },
+  {
+    "id": "eff920f2dd403cf6",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Assembler join",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1420,
+    "y": 760,
+    "wires": []
+  },
+  {
+    "id": "cdbaaddb0190858e",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Status Publisher",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/ev_status_publisher.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste ev_status_publisher.js\" });\nnode.warn(\n    \"'Status Publisher' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/ev_status_publisher.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 780,
+    "y": 1720,
+    "wires": [
+      [
+        "8bf752d7fba27568"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/ev_status_publisher.js`](NodeRed/Scripts/ev_status_publisher.js) in the repo, not in this flow export.\n\n**To activate this node:** open `ev_status_publisher.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "25916ffe707971c8",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Shelly frc",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1220,
+    "y": 1620,
+    "wires": []
+  },
+  {
+    "id": "5738f6da35306bcc",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Shelly amp",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1070,
+    "y": 1320,
+    "wires": []
+  },
+  {
+    "id": "63f3d0ac79d1239a",
+    "type": "delay",
+    "z": "04b80678578a6169",
+    "name": "",
+    "pauseType": "delay",
+    "timeout": "3",
+    "timeoutUnits": "seconds",
+    "rate": "1",
+    "nbRateUnits": "1",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": false,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 1080,
+    "y": 1560,
+    "wires": [
+      [
+        "b8940c9b50e1b056"
+      ]
+    ]
+  },
+  {
+    "id": "106cffac3e9df5b5",
+    "type": "cronplus",
+    "z": "04b80678578a6169",
+    "name": "",
+    "outputField": "payload",
+    "timeZone": "",
+    "storeName": "",
+    "commandResponseMsgOutput": "output1",
+    "defaultLocation": "",
+    "defaultLocationType": "default",
+    "outputs": 1,
+    "options": [
+      {
+        "name": "schedule1",
+        "topic": "topic1",
+        "payloadType": "default",
+        "payload": "",
+        "expressionType": "cron",
+        "expression": "0 * * * * *",
+        "location": "",
+        "offset": "0",
+        "solarType": "all",
+        "solarEvents": "sunrise,sunset"
+      }
+    ],
+    "x": 280,
+    "y": 880,
+    "wires": [
+      [
+        "6bda6ff0552ff7a2",
+        "43948e27467bb416",
+        "3b8385fb9d3a1d9a",
+        "a267f27e5353f18b",
+        "8e23ba2b02a17829"
+      ]
+    ]
+  },
+  {
+    "id": "8ad9bca779d20b95",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Nordpool Publisher",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/nordpool_publisher.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste nordpool_publisher.js\" });\nnode.warn(\n    \"'Nordpool Publisher' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/nordpool_publisher.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 790,
+    "y": 360,
+    "wires": [
+      [
+        "8bf752d7fba27568"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/nordpool_publisher.js`](NodeRed/Scripts/nordpool_publisher.js) in the repo, not in this flow export.\n\n**To activate this node:** open `nordpool_publisher.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "92feb51f074bbeb8",
+    "type": "delay",
+    "z": "04b80678578a6169",
+    "name": "",
+    "pauseType": "delay",
+    "timeout": "10",
+    "timeoutUnits": "seconds",
+    "rate": "1",
+    "nbRateUnits": "1",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": false,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 280,
+    "y": 360,
+    "wires": [
+      [
+        "8ad9bca779d20b95",
+        "42e5c84d44a58856",
+        "59ec25475f211f08"
+      ]
+    ]
+  },
+  {
+    "id": "73db28e527ffd870",
+    "type": "cronplus",
+    "z": "04b80678578a6169",
+    "name": "",
+    "outputField": "payload",
+    "timeZone": "",
+    "storeName": "",
+    "commandResponseMsgOutput": "output1",
+    "defaultLocation": "",
+    "defaultLocationType": "default",
+    "outputs": 1,
+    "options": [
+      {
+        "name": "schedule1",
+        "topic": "topic1",
+        "payloadType": "default",
+        "payload": "",
+        "expressionType": "cron",
+        "expression": "0,15,30,45 * * * *",
+        "location": "",
+        "offset": "0",
+        "solarType": "all",
+        "solarEvents": "sunrise,sunset"
+      }
+    ],
+    "x": 280,
+    "y": 440,
+    "wires": [
+      [
+        "92feb51f074bbeb8"
+      ]
+    ]
+  },
+  {
+    "id": "f70bff2076ef9ded",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Fuse Guard",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/fuse_guard.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste fuse_guard.js\" });\nnode.warn(\n    \"'Fuse Guard' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/fuse_guard.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1170,
+    "y": 160,
+    "wires": [
+      [
+        "dcf75ef51b9bcdea"
+      ],
+      [
+        "05d2951002c6cbfa"
+      ],
+      [
+        "8bf752d7fba27568"
+      ]
+    ],
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/fuse_guard.js`](NodeRed/Scripts/fuse_guard.js) in the repo, not in this flow export.\n\n**To activate this node:** open `fuse_guard.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
+  },
+  {
+    "id": "dcf75ef51b9bcdea",
+    "type": "http request",
+    "z": "04b80678578a6169",
+    "name": "",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": false,
+    "url": "",
+    "persist": false,
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1410,
+    "y": 120,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "05d2951002c6cbfa",
+    "type": "http request",
+    "z": "04b80678578a6169",
+    "name": "",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": false,
+    "url": "",
+    "persist": false,
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1410,
+    "y": 200,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "a4efdb7b7d60a963",
+    "type": "inject",
+    "z": "04b80678578a6169",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "10",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 1010,
+    "y": 160,
+    "wires": [
+      [
+        "f70bff2076ef9ded"
+      ]
+    ]
+  },
+  {
+    "id": "7fa598a6082538e0",
+    "type": "debug",
+    "z": "04b80678578a6169",
+    "name": "Coordinator diag",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "diag",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 510,
+    "y": 1280,
+    "wires": []
+  },
+  {
+    "id": "628c3fb61f647184",
+    "type": "server-state-changed",
+    "z": "04b80678578a6169",
+    "name": "EV Charger 1 Car",
+    "server": "628be9abfc84199d",
+    "version": 6,
+    "outputs": 1,
+    "exposeAsEntityConfig": "",
+    "entities": {
+      "entity": [
+        "input_select.ev_charger1_car"
+      ],
+      "substring": [],
+      "regex": []
+    },
+    "outputInitially": false,
+    "stateType": "str",
+    "ifState": "",
+    "ifStateType": "str",
+    "ifStateOperator": "is",
+    "outputOnlyOnStateChange": true,
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "ignorePrevStateNull": false,
+    "ignorePrevStateUnknown": false,
+    "ignorePrevStateUnavailable": false,
+    "ignoreCurrentStateUnknown": false,
+    "ignoreCurrentStateUnavailable": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "string",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "eventData"
+      },
+      {
+        "property": "topic",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "triggerId"
+      }
+    ],
+    "x": 250,
+    "y": 1000,
+    "wires": [
+      [
+        "2b8004a17eb1b154"
+      ]
+    ]
+  },
+  {
+    "id": "53bdc2d942695fa7",
+    "type": "server-state-changed",
+    "z": "04b80678578a6169",
+    "name": "EV Charger 2 Car",
+    "server": "628be9abfc84199d",
+    "version": 6,
+    "outputs": 1,
+    "exposeAsEntityConfig": "",
+    "entities": {
+      "entity": [
+        "input_select.ev_charger2_car"
+      ],
+      "substring": [],
+      "regex": []
+    },
+    "outputInitially": false,
+    "stateType": "str",
+    "ifState": "",
+    "ifStateType": "str",
+    "ifStateOperator": "is",
+    "outputOnlyOnStateChange": true,
+    "for": "0",
+    "forType": "num",
+    "forUnits": "minutes",
+    "ignorePrevStateNull": false,
+    "ignorePrevStateUnknown": false,
+    "ignorePrevStateUnavailable": false,
+    "ignoreCurrentStateUnknown": false,
+    "ignoreCurrentStateUnavailable": false,
+    "outputProperties": [
+      {
+        "property": "payload",
+        "propertyType": "msg",
+        "value": "string",
+        "valueType": "entityState"
+      },
+      {
+        "property": "data",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "eventData"
+      },
+      {
+        "property": "topic",
+        "propertyType": "msg",
+        "value": "",
+        "valueType": "triggerId"
+      }
+    ],
+    "x": 250,
+    "y": 1060,
+    "wires": [
+      [
+        "2b8004a17eb1b154"
+      ]
+    ]
+  },
+  {
+    "id": "2b8004a17eb1b154",
+    "type": "delay",
+    "z": "04b80678578a6169",
+    "name": "",
+    "pauseType": "rate",
+    "timeout": "5",
+    "timeoutUnits": "seconds",
+    "rate": "1",
+    "nbRateUnits": "3",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": true,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 260,
+    "y": 940,
+    "wires": [
+      [
+        "6bda6ff0552ff7a2",
+        "43948e27467bb416",
+        "3b8385fb9d3a1d9a",
+        "a267f27e5353f18b",
+        "8e23ba2b02a17829"
+      ]
+    ]
+  },
+  {
+    "id": "628be9abfc84199d",
+    "type": "server",
+    "name": "Home Assistant",
+    "version": 6,
+    "addon": false,
+    "rejectUnauthorizedCerts": false,
+    "ha_boolean": [
+      "y",
+      "yes",
+      "true",
+      "on",
+      "home",
+      "open"
+    ],
+    "connectionDelay": true,
+    "cacheJson": true,
+    "heartbeat": false,
+    "heartbeatInterval": "30",
+    "areaSelector": "friendlyName",
+    "deviceSelector": "friendlyName",
+    "entitySelector": "friendlyName",
+    "statusSeparator": ": ",
+    "statusYear": "hidden",
+    "statusMonth": "short",
+    "statusDay": "numeric",
+    "statusHourCycle": "default",
+    "statusTimeFormat": "h:m",
+    "enableGlobalContextStore": true
+  },
+  {
+    "id": "bfbfd2a91f67800e",
+    "type": "mqtt-broker",
+    "name": "",
+    "broker": "localhost",
+    "port": 1883,
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": 4,
+    "keepalive": 60,
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "0fd37c034d6e1399",
+    "type": "global-config",
+    "env": [],
+    "modules": {
+      "node-red-contrib-home-assistant-websocket": "0.80.3",
+      "node-red-contrib-cron-plus": "2.2.4"
+    }
+  }
+]
