@@ -62,7 +62,8 @@
         "a65271a9b880ec35"
       ],
       [
-        "cdbaaddb0190858e"
+        "cdbaaddb0190858e",
+        "fastcsvloggere41bfce5"
       ]
     ],
     "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/evaluator.js`](NodeRed/Scripts/evaluator.js) in the repo, not in this flow export.\n\n**To activate this node:** open `evaluator.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nKeeping scripts out of the flow JSON means the same file is the source of truth whether you're reading it, diffing it, or pasting it in \u2014 see the repo README for the full file reference and the reasoning behind this layout.\n"
@@ -1919,5 +1920,43 @@
       "node-red-contrib-home-assistant-websocket": "0.80.3",
       "node-red-contrib-cron-plus": "2.2.4"
     }
+  },
+  {
+    "id": "fastcsvloggere41bfce5",
+    "type": "function",
+    "z": "04b80678578a6169",
+    "name": "Fast CSV Logger",
+    "func": "// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//  TEMPLATE PLACEHOLDER \u2014 this node ships without its script on purpose\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n//\n//  This flow is a STRUCTURE template (nodes, wiring, config) for the\n//  public repo. Function bodies are kept out of the template and\n//  versioned as standalone files instead, so you always deploy the\n//  same script whether you're pasting it in by hand or scripting the\n//  import \u2014 one source of truth, not two copies that can drift.\n//\n//  TO USE THIS NODE:\n//    1. Open  NodeRed/Scripts/fast_csv_logger.js\n//    2. Copy its full contents\n//    3. Paste over this entire function body\n//    4. Deploy\n//\n//  Until you do, this node is an inert no-op: it logs a warning once\n//  and returns null so it fails LOUDLY (visible in the debug sidebar)\n//  rather than silently doing nothing forever.\n// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\nnode.status({ fill: \"red\", shape: \"ring\", text: \"\u26a0 paste fast_csv_logger.js\" });\nnode.warn(\n    \"'Fast CSV Logger' is a template placeholder \u2014 paste in \" +\n    \"NodeRed/Scripts/fast_csv_logger.js and redeploy. See the node's Info tab.\"\n);\nreturn null;\n",
+    "info": "### Template placeholder\n\nThis node's real logic lives in [`NodeRed/Scripts/fast_csv_logger.js`](NodeRed/Scripts/fast_csv_logger.js) in the repo, not in this flow export.\n\n**To activate this node:** open `fast_csv_logger.js`, copy its contents, and paste them over the function body (replacing the placeholder), then deploy.\n\nWire this from Evaluator's OUTPUT 3 (the same unconditional trigger Status Publisher uses) \u2014 not output 1/2, which go null for a PV-owned charger by design.",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 580,
+    "y": 1660,
+    "wires": [
+      [
+        "fastcsvfile9766d1f0"
+      ]
+    ]
+  },
+  {
+    "id": "fastcsvfile9766d1f0",
+    "type": "file",
+    "z": "04b80678578a6169",
+    "name": "Fast CSV file",
+    "filename": "/data/ev_charging_log.csv",
+    "filenameType": "str",
+    "appendNewline": true,
+    "createDir": false,
+    "overwriteFile": "false",
+    "encoding": "none",
+    "x": 780,
+    "y": 1660,
+    "wires": [
+      []
+    ]
   }
 ]

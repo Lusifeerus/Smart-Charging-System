@@ -140,6 +140,7 @@ Deploying steps 1–3 alone gives you a working system with manual mode-switchin
 | `NodeRed/Scripts/ha_formatter.js`, `debug_slots.js` | Fast Flow | Schedule formatting / debugging |
 | `NodeRed/Scripts/mqtt_discovery.js` | Fast Flow | Registers HA MQTT sensors (also PV status — see below) |
 | `NodeRed/Scripts/ev_status_publisher.js` | Fast Flow | Publishes per-car live status + health block |
+| `NodeRed/Scripts/fast_csv_logger.js` | Fast Flow | Centralised per-cycle log of every scheduling decision — for after-the-fact diagnosis |
 | `NodeRed/Scripts/fuse_guard.js` | Integration | Independent main-fuse protection |
 | `NodeRed/pv_eco_flows_template.json` | PV Eco | Node-RED flow template (separate tab from Fast Flow) |
 | `NodeRed/go-e_PV_Surplus.json` | PV Eco | Alternative no-battery flow — feeds grid power to go-e Eco mode, see [PV_ECO_FLOW.md](docs/PV_ECO_FLOW.md#alternative-go-e-built-in-eco-mode-no-home-battery) |

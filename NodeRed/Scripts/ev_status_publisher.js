@@ -135,7 +135,8 @@ function hasUpcomingSlots(allowedMap, slots) {
 
 // ═══ MAPPING RESOLVER v1 — DO NOT EDIT IN ISOLATION ═══════════
 // Byte-identical copies live in: coordinator.js, evaluator.js,
-// planner_car1.js, planner_car2.js, ev_status_publisher.js.
+// planner_car1.js, planner_car2.js, ev_status_publisher.js,
+// fast_csv_logger.js.
 // Semantic twins (same rules, other runtimes): ev_strategy.py
 // (pyscript), ev-charging-cards.js (_myCharger). Edit all together
 // and bump the version everywhere; the repo's check_resolver_sync.py

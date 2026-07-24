@@ -35,6 +35,7 @@ BLOCK_FILES = [
     "NodeRed/Scripts/planner_car1.js",
     "NodeRed/Scripts/planner_car2.js",
     "NodeRed/Scripts/ev_status_publisher.js",
+    "NodeRed/Scripts/fast_csv_logger.js",
 ]
 
 # Semantic twins: can't be byte-identical (other languages) — must carry a

@@ -20,7 +20,8 @@ const GOE_C1_IP = "192.168.1.XX";   // CHANGE ME: your go-e IP
 
 // ═══ MAPPING RESOLVER v1 — DO NOT EDIT IN ISOLATION ═══════════
 // Byte-identical copies live in: coordinator.js, evaluator.js,
-// planner_car1.js, planner_car2.js, ev_status_publisher.js.
+// planner_car1.js, planner_car2.js, ev_status_publisher.js,
+// fast_csv_logger.js.
 // Semantic twins (same rules, other runtimes): ev_strategy.py
 // (pyscript), ev-charging-cards.js (_myCharger). Edit all together
 // and bump the version everywhere; the repo's check_resolver_sync.py
@@ -256,6 +257,17 @@ const out2 = (r2 && !c2PvOwned)
 // existing value untouched (the tracker/its own path owns it).
 if (!c1PvOwned) flow.set('charger1.frc', r1 ? r1.frc : 1);
 if (!c2PvOwned) flow.set('charger2.frc', r2 ? r2.frc : 1);
+
+// Expose the evaluator's OWN scheduler_allows decision to flow context —
+// previously internal-only (computed in evalCharger, returned in the msg
+// payload, but not readable by any other node). This is the single most
+// diagnostic fact for "was charging allowed outside the scheduled slot":
+// without it, a downstream observer can only see the resulting frc/amp,
+// not WHY the evaluator thought it should allow charging. Added for the
+// Fast CSV Logger (fast_csv_logger.js) — same "cross-node needs it, so
+// flow.set it" pattern already used for didwestop/lb_wants_stop.
+flow.set('charger1.schedulerAllows', r1 ? r1.scheduler_allows : null);
+flow.set('charger2.schedulerAllows', r2 ? r2.scheduler_allows : null);
 
 // ═══ Output 3 — UNCONDITIONAL Status Publisher trigger ═══════════════
 // Bug fixed here (live incident): Status Publisher was wired to output 1

@@ -325,6 +325,51 @@ Everything else the system needs (measured current, phase count) it deliberately
 
 ---
 
+## Diagnostic Log (Fast CSV Logger)
+
+Fast Flow had no persistent, after-the-fact log until a real incident made
+the gap obvious: charging was allowed for a few minutes outside a scheduled
+slot, twice overnight, self-correcting at the next slot boundary each time.
+Node-RED's debug pane isn't persisted, and HA's own entity history only
+covers a handful of coarse, discrete-state helpers (mode, kill switch,
+boost, mapping) — none of which show what the Evaluator actually computed
+on a given cycle. Diagnosing it meant reconstructing partial context from
+HA history alone, after ruling out every toggle-based cause one at a time.
+
+`fast_csv_logger.js` closes that gap: a comprehensive, per-cycle CSV row —
+one line per Evaluator run (currently every 1 minute) — written to
+`/data/ev_charging_log.csv`. Wired from Evaluator's **output 3**, the same
+unconditional trigger Status Publisher uses (not output 1/2, which go null
+for a PV-owned charger by design — wiring a logger to those would silently
+stop logging that charger the moment PV Eco engages, the same class of bug
+the Status Publisher output-3 fix addressed).
+
+**Columns**, per charger (`c1_`/`c2_` prefix):
+
+| Column | Meaning |
+|---|---|
+| `car` | assigned car number (mapping-resolved) |
+| `carState` | polled connection state |
+| `frc_commanded` | what the Evaluator last commanded |
+| `frc_polled` | what the charger itself reports (ground truth) |
+| `amp_reported` | polled current draw |
+| `scheduler_allows` | **the Evaluator's own decision this cycle** — the single most diagnostic field for "was charging allowed outside the schedule" |
+| `lb_wants_stop` | Coordinator's load-balancing stop flag |
+| `didwestop` | Coordinator's own stop reason code |
+| `boost` | Boost active for the assigned car |
+| `strategy` | assigned car's strategy (fast / pv_eco) |
+| `pv_owned` | true if the PV Tracker owns this charger this cycle |
+| `fault` | polled charger fault state |
+
+Plus global columns: `charging_mode`, `charging_lb`, `fuse_stop`, and the
+current Nord Pool slot's `slot_ts`/`slot_price`/`slots_count` for context.
+
+`scheduler_allows` is newly exposed to flow context by `evaluator.js`
+specifically for this logger — it was previously computed and used
+internally but never written anywhere another node could read it.
+
+---
+
 ## File Reference
 
 See the [top-level README](../README.md#file-reference) for the full-system file table. Fast-flow-specific files are grouped under `NodeRed/Scripts/` there.
