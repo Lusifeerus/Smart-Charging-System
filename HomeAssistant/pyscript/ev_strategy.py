@@ -45,8 +45,8 @@ from datetime import datetime, timedelta
 PV_CAPABLE_CHARGERS = {1}          # charger 1 = go-e (phase switching)
 
 CAR_SOC_SENSORS = {
-    1: "sensor.car1_battery_soc",   # CHANGE ME: your Car 1 SoC sensor
-    2: "sensor.car2_battery_soc",   # CHANGE ME: your Car 2 SoC sensor
+    1: "sensor.car1_battery_soc",
+    2: "sensor.car2_battery_soc",
 }
 
 # SoC-while-charging watchdog (Finding 5): per-charger power sensors.
@@ -56,7 +56,22 @@ CHARGER_POWER_SENSORS = {
     2: None,   # TopAC / Shelly power sensor — CHANGE-ME when known
 }
 SOC_WATCHDOG_MIN_POWER_W = 1000    # "really charging" threshold
-SOC_WATCHDOG_MINUTES = 60          # frozen this long while charging → flag
+
+# Per-car usable capacity — converts delivered kWh into expected SoC %.
+CAR_BATTERY_KWH = {1: 78, 2: 75}
+
+# Progress is judged against ENERGY DELIVERED, not a wall clock. A fixed
+# timer cannot serve both a 16 A grid session (1% in ~4 min) and a 6 A PV
+# Eco session (1% in ~32 min) — it is necessarily twitchy on one or blind
+# on the other. Accumulating delivered kWh and comparing owed-vs-actual SoC
+# gain holds both to the same standard, and additionally catches a car
+# gaining at the WRONG RATE: the both-chargers-swapped case, where nothing
+# is ever frozen but each car climbs at the other charger's speed.
+SOC_WATCHDOG_MIN_MINUTES      = 20     # never judge sooner (SoC report lag)
+SOC_WATCHDOG_MIN_EXPECTED_PCT = 3.0    # nor before this much gain is owed
+SOC_WATCHDOG_PROGRESS_RATIO   = 0.35   # actual < 35% of owed → "behind"
+SOC_WATCHDOG_MATCH_RATIO      = 0.50   # other car ≥ 50% of owed → it is the
+                                       # car actually on this charger
 
 # ── go-e phase switching ─────────────────────────────────────────────
 # Phase mode was historically a manual seasonal setting; the one-tap
@@ -340,12 +355,29 @@ _soc_watch = {}
 
 
 def _soc_watchdog():
-    """Finding 5 / roadmap 'SoC-mismatch watchdog': while a charger is
-    demonstrably delivering power to its assigned car, that car's SoC must
-    rise within SOC_WATCHDOG_MINUTES. If the reading stays frozen, flag
-    binary_sensor.ev_carN_soc_stale — the health sensor surfaces it as
-    degraded. Detection only; NEVER acts on charging."""
-    flagged = {1: False, 2: False}
+    """Roadmap step 3, 'SoC-mismatch watchdog' — now complete.
+
+    While a charger is demonstrably delivering power, the car the mapping
+    says is plugged into it must gain SoC in proportion to the energy
+    delivered. Two independent conclusions are drawn:
+
+      1. Assigned car is NOT tracking the delivered energy
+         → binary_sensor.ev_carN_soc_stale  (integration dead, car asleep,
+           or wrong car on the charger — ambiguous on its own)
+
+      2. ...and the OTHER car gained roughly what this charger delivered
+         → binary_sensor.ev_chargerN_mapping_mismatch  (unambiguous: that
+           is the car actually plugged in here, the mapping is swapped)
+
+    (2) is the half of the original design that was never built. A frozen
+    reading alone cannot distinguish a parked car from a swapped plug; the
+    other car's gain matching THIS charger's delivered energy can.
+
+    Detection only. This NEVER reassigns the mapping and NEVER acts on
+    charging — the watchdog warns, it does not drive."""
+    behind = {1: False, 2: False}          # keyed by CAR
+    mismatch = {}                          # keyed by CHARGER
+    evidence = {}                          # keyed by CHARGER
 
     for charger_n, power_sensor in CHARGER_POWER_SENSORS.items():
         if not power_sensor:
@@ -361,32 +393,106 @@ def _soc_watchdog():
             _soc_watch.pop(charger_n, None)
             continue
 
+        other_car = 2 if car_n == 1 else 1
+        other_soc = _soc_raw(other_car)
+
         sess = _soc_watch.get(charger_n)
         if sess is None or sess["car"] != car_n:
-            _soc_watch[charger_n] = {"car": car_n, "since": datetime.now(),
-                                     "start_soc": soc}
+            _soc_watch[charger_n] = {
+                "car": car_n, "since": datetime.now(), "start_soc": soc,
+                "other_start_soc": other_soc, "energy_kwh": 0.0,
+            }
             continue
-        if soc > sess["start_soc"]:
-            # SoC moving — healthy; slide the window forward
-            sess["since"] = datetime.now()
-            sess["start_soc"] = soc
-            continue
+
+        # Integrate delivered energy — this function runs once per minute.
+        sess["energy_kwh"] += (power_w / 1000.0) / 60.0
+
+        capacity = CAR_BATTERY_KWH.get(car_n, 75)
+        owed_pct = (sess["energy_kwh"] / capacity) * 100
         mins = (datetime.now() - sess["since"]).total_seconds() / 60
-        if mins >= SOC_WATCHDOG_MINUTES:
-            flagged[car_n] = True
+
+        # Withhold judgement until there is real evidence: a coarse or
+        # laggy SoC report must not be mistaken for a stalled one.
+        if mins < SOC_WATCHDOG_MIN_MINUTES or owed_pct < SOC_WATCHDOG_MIN_EXPECTED_PCT:
+            continue
+
+        got_pct = soc - sess["start_soc"]
+        if got_pct >= owed_pct * SOC_WATCHDOG_PROGRESS_RATIO:
+            continue                       # tracking the energy — healthy
+
+        behind[car_n] = True
+
+        # ── Cross-car correlation ──────────────────────────────────────
+        if other_soc is None or sess.get("other_start_soc") is None:
+            continue
+        other_gain = other_soc - sess["other_start_soc"]
+        if other_gain < owed_pct * SOC_WATCHDOG_MATCH_RATIO:
+            continue                       # neither car tracks us — not a swap
+
+        # Rule out the innocent explanation: the other car is simply
+        # charging on its OWN charger at the same time, which would explain
+        # its gain without implying anything about our mapping.
+        other_charger = _charger_of_car(other_car)
+        other_sensor = CHARGER_POWER_SENSORS.get(other_charger) if other_charger else None
+        if other_sensor:
+            try:
+                if float(_get(other_sensor, 0) or 0) >= SOC_WATCHDOG_MIN_POWER_W:
+                    continue               # both charging — proves nothing
+            except (TypeError, ValueError):
+                pass
+
+        mismatch[charger_n] = True
+        evidence[charger_n] = {
+            "assigned_car": car_n,
+            "assigned_car_gain_pct": round(got_pct, 1),
+            "rising_car": other_car,
+            "rising_car_gain_pct": round(other_gain, 1),
+            "energy_delivered_kwh": round(sess["energy_kwh"], 2),
+            "expected_gain_pct": round(owed_pct, 1),
+            "session_minutes": int(mins),
+            # False → the other charger has no power sensor configured, so
+            # "both charging simultaneously" could not be positively ruled
+            # out; the verdict rests on the energy-magnitude match alone.
+            "other_charger_confirmed_idle": bool(other_sensor),
+        }
 
     for car_n in (1, 2):
         entity = f"binary_sensor.ev_car{car_n}_soc_stale"
-        new_state = "on" if flagged[car_n] else "off"
+        new_state = "on" if behind[car_n] else "off"
         if _get(entity) != new_state:
-            if flagged[car_n]:
-                log.warning(f"ev_strategy: car{car_n} SoC frozen ≥ "
-                            f"{SOC_WATCHDOG_MINUTES} min while charging")
+            if behind[car_n]:
+                log.warning(f"ev_strategy: car{car_n} SoC not tracking the "
+                            f"energy delivered to its charger")
             state.set(entity, new_state, {
                 "friendly_name": f"EV Car {car_n} SoC stale while charging",
                 "device_class": "problem",
                 "icon": "mdi:battery-alert-variant-outline",
             })
+
+    for charger_n in CHARGER_POWER_SENSORS:
+        entity = f"binary_sensor.ev_charger{charger_n}_mapping_mismatch"
+        on = bool(mismatch.get(charger_n))
+        was = _get(entity)
+        attrs = {
+            "friendly_name": f"EV Charger {charger_n} mapping mismatch",
+            "device_class": "problem",
+            "icon": "mdi:swap-horizontal-bold",
+        }
+        attrs.update(evidence.get(charger_n, {}))
+        if on:
+            if was != "on":                # log the transition, not every tick
+                e = evidence.get(charger_n, {})
+                log.warning(
+                    f"ev_strategy: charger{charger_n} MAPPING MISMATCH? "
+                    f"delivered {e.get('energy_delivered_kwh')} kWh; assigned "
+                    f"car{e.get('assigned_car')} gained "
+                    f"{e.get('assigned_car_gain_pct')}% but car"
+                    f"{e.get('rising_car')} gained "
+                    f"{e.get('rising_car_gain_pct')}% — check the car↔charger "
+                    f"assignment")
+            state.set(entity, "on", attrs)  # refresh evidence each cycle
+        elif was != "off":
+            state.set(entity, "off", attrs)
 
 
 @time_trigger("cron(* * * * *)")

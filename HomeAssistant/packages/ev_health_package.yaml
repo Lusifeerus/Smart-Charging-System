@@ -156,15 +156,27 @@ template:
               {% endif %}
             {% endif %}
 
-            {# ── Car SoC: frozen-while-charging watchdog + idle reading age ── #}
+            {# ── Car SoC: not-tracking-delivered-energy watchdog + idle age ── #}
             {% set max_soc_h = states('input_number.ev_soc_max_age_hours') | float(26) %}
             {% for n in [1, 2] %}
               {% if is_state('binary_sensor.ev_car' ~ n ~ '_soc_stale', 'on') %}
-                {% set ns.d = ns.d + ['Car ' ~ n ~ ' SoC frozen while charging'] %}
+                {% set ns.d = ns.d + ['Car ' ~ n ~ ' SoC not tracking charge'] %}
               {% endif %}
               {% set age = state_attr('sensor.ev_strategy_heartbeat', 'car' ~ n ~ '_soc_age_h') %}
               {% if age is not none and age | float(0) > max_soc_h %}
                 {% set ns.d = ns.d + ['Car ' ~ n ~ ' SoC data ' ~ age | float | round(0) | int ~ ' h old'] %}
+              {% endif %}
+            {% endfor %}
+
+            {# ── Car↔charger mapping mismatch (roadmap step 3) ──────────── #}
+            {# The assigned car is not gaining the energy this charger is    #}
+            {# delivering, but the OTHER car is — i.e. the plug and the      #}
+            {# assignment disagree. Named explicitly because the remedy is   #}
+            {# a specific user action: swap the assignment on the car card.  #}
+            {% for n in [1, 2] %}
+              {% if is_state('binary_sensor.ev_charger' ~ n ~ '_mapping_mismatch', 'on') %}
+                {% set rising = state_attr('binary_sensor.ev_charger' ~ n ~ '_mapping_mismatch', 'rising_car') %}
+                {% set ns.d = ns.d + ['Charger ' ~ n ~ ' mapping mismatch — Car ' ~ (rising | default('?')) ~ ' appears to be the one plugged in'] %}
               {% endif %}
             {% endfor %}
 

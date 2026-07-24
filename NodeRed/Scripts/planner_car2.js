@@ -29,19 +29,40 @@ if (!Number.isFinite(soc)) {
     node.warn("Planner car2: SoC sensor unavailable — skipping run");
     return null;
 }
-// Freshness (Finding 5): planning from a reading older than
-// ev_soc_max_age_hours computes energy need from fiction — skip the run
-// instead (the previous allowed_map keeps executing, same degradation as
-// an unavailable sensor). last_updated missing → assume fresh.
+// Freshness: REPORTED, never blocking (v1.5). The car's SoC sensor
+// publishes only on change, so a parked car's reading legitimately ages
+// while remaining perfectly correct — "old" is not "wrong" for a
+// change-driven sensor, only for a polling one.
+//
+// Blocking on age was SELF-SEALING: stale → no plan → no charge → the car
+// never wakes → still stale, indefinitely, until the owner happened to
+// drive it. The guard manufactured the very condition it was meant to
+// protect against (observed live: 34 h old reading, planner skipping every
+// run, car sitting at 74% against a 90% trip target).
+//
+// Trusting the value costs at worst a slightly undersized plan — a stale
+// reading is stale-HIGH if the car was driven since, so we under-request
+// rather than over-request — and that self-corrects on the next run: once
+// charging starts the car wakes, SoC moves, the sensor publishes, and the
+// plan is recomputed against the truth.
+//
+// The genuinely alarming case is a reading frozen WHILE charging (a
+// different car on the charger, or a dead integration). That needs its own
+// rate-aware detector; sensor age alone cannot distinguish it from a
+// parked car. last_updated missing → treated as fresh.
+let soc_age_h = null;
+let soc_stale = false;
 {
     const maxAgeH = Number(global.get(
         "homeassistant.homeAssistant.states['input_number.ev_soc_max_age_hours'].state"
     ));
     const lu = Date.parse(socEnt.last_updated);
-    if (Number.isFinite(lu) && Number.isFinite(maxAgeH) &&
-        (Date.now() - lu) > maxAgeH * 3600 * 1000) {
-        node.warn(`Planner car2: SoC reading ${Math.round((Date.now() - lu) / 3600000)} h old — skipping run`);
-        return null;
+    if (Number.isFinite(lu)) {
+        soc_age_h = Math.round((Date.now() - lu) / 3600000);
+        if (Number.isFinite(maxAgeH) && (Date.now() - lu) > maxAgeH * 3600 * 1000) {
+            soc_stale = true;
+            node.warn(`Planner car2: SoC reading ${soc_age_h} h old — planning from it anyway (sensor updates on change; a parked car keeps its value)`);
+        }
     }
 }
 const battery_kwh = Number(flow.get("car2.battery_kwh") || 75);
@@ -75,7 +96,24 @@ function computeDeadlineTs(deadline) {
 const deadlineTs = computeDeadlineTs(deadlineStr);
 
 // ---- Filter usable slots ----
-const usableSlots = slots.filter(s => s.ts <= deadlineTs);
+// Must exclude slots that have ALREADY ELAPSED, not just those past the
+// deadline. nordpool_slots is pruned only when the hourly Nord Pool parser
+// runs, so between prunes the array still carries slots that came and went.
+// Ranking those by price let them consume the slots_needed budget below —
+// the planner "spending" charging capacity on time that no longer exists,
+// and under-scheduling the slots that remain. Observed live: at a :30 slot
+// boundary the current slot lost its place to ~4 cheaper-but-expired slots
+// and was denied; three minutes later the hourly parser pruned them, the
+// budget freed up, and the same slot was allowed — a 3-minute charging gap
+// with no cause visible anywhere in the schedule.
+//
+// A slot still counts while it is in progress (its END is in the future),
+// so the current slot survives this filter. It is counted whole even when
+// partially elapsed — energy_per_slot already carries enough margin that
+// prorating would add a partial-slot concept downstream for no real gain.
+const SLOT_MS = 15 * 60 * 1000;
+const nowTs = Date.now();
+const usableSlots = slots.filter(s => (s.ts + SLOT_MS) > nowTs && s.ts <= deadlineTs);
 if (usableSlots.length === 0) return null;
 
 // ---- Target SoC ----
@@ -174,8 +212,7 @@ for (let i = 0; i < slots_needed && i < sorted.length; i++) {
 // was already made for the current slot. Only keep it allowed if it was
 // allowed in the PREVIOUS planner run — do not add it if it was not
 // scheduled before. Lookup uses timestamp key, not positional index.
-const SLOT_MS = 15 * 60 * 1000;
-const nowTs = Date.now();
+// (SLOT_MS / nowTs declared above, at the usable-slot filter)
 const currentSlot = slots.find(s => s.ts <= nowTs && (s.ts + SLOT_MS) > nowTs);
 if (currentSlot && currentSlot.ts <= deadlineTs) {
     const previousMap = flow.get("car2.allowed_map") || {};
@@ -204,6 +241,8 @@ msg.payload = {
     car: 2,
     allowed_map: allowedMap,
     soc,
+    soc_age_h,
+    soc_stale,
     target_soc,
     mode,
     slots_needed,
