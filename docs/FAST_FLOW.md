@@ -110,6 +110,10 @@ Add the contents of `nordpool.yaml` to `configuration.yaml` under the `template:
 
 **SoC sensor entity IDs** — update in `planner_car1.js`, `planner_car2.js`, `coordinator.js` (the `CAR_SOC_SENSORS` table), **and** `pyscript/ev_strategy.py` (same table name — see [INTEGRATION.md](INTEGRATION.md), keeping these in sync matters for the SoC-staleness watchdog and Boost end-condition).
 
+**Charger power sensor entity IDs** (`pyscript/ev_strategy.py`, `CHARGER_POWER_SENSORS`) — feeds the [frozen-SoC and mapping-mismatch watchdog](INTEGRATION.md#soc-staleness-handling). Each entry is `(entity_id, unit)` — **the unit is not a formality**: go-e and Shelly-style power sensors commonly disagree (W vs kW), and reading the wrong one is a silent 1000× error that makes a charger look permanently idle to the watchdog, with no error anywhere. `_charger_power_w()` cross-checks the declared unit against Home Assistant's own `unit_of_measurement` and warns once on mismatch — watch the log after changing this. A charger left as `None` (the public-repo default for charger 2) is simply excluded from both watchdogs, not an error.
+
+**Per-car battery capacity** (`pyscript/ev_strategy.py`, `CAR_BATTERY_KWH`) — usable kWh per car, used to convert energy delivered into expected SoC % gain for the same watchdog. Get this wrong and the watchdog's judgement of "behind schedule" is wrong in the same direction — worth setting to your actual usable capacity, not the advertised gross figure.
+
 **Grid sensor entity IDs** — the three `server-state-changed`/`api-current-state` nodes feeding the Grid Join, and the Fuse Guard's own independent read of the same three sensors.
 
 **IP addresses:**
@@ -256,6 +260,10 @@ The Shelly is polled once per cycle (`work_state` only) — measured current is 
 
 > Disable the Shelly's built-in `auto_balance` — it conflicts with the Coordinator's load balancing.
 
+### Power sensor for the SoC watchdog
+
+Separately from the poll above, `pyscript/ev_strategy.py`'s `CHARGER_POWER_SENSORS[2]` wants the Shelly's own power-measurement entity (not `work_state`) so the [SoC and mapping-mismatch watchdog](INTEGRATION.md#soc-staleness-handling) can tell when charger 2 is actually delivering current. **Check its unit before assuming W** — this integration's own Shelly power sensor reports **kW**, not W like go-e's; `CHARGER_POWER_SENSORS` records the unit explicitly per charger for exactly this reason. Left as `None`, charger 2 is simply excluded from that watchdog — not broken, just unmonitored.
+
 ---
 
 ## Changing a Vehicle
@@ -317,6 +325,7 @@ Everything else the system needs (measured current, phase count) it deliberately
 2. **Write the amp output handler** (like `shelly_output_amp.js`) — translate the Coordinator's `amp` setpoint into your charger's set-current call.
 3. **Write the frc output handler** (like `shelly_output_frc.js`) — translate the Evaluator's `frc` (0 = charge, 1 = stop) into your charger's start/stop call. If your charger needs a moment between commands (the Shelly needs ~1 s between a current-set and a start), keep a delay node on this path.
 4. **Wire it in** on the Coordinator and Evaluator outputs for that charger, replacing the go-e or Shelly HTTP nodes.
+5. **Optional but worth doing: add it to `CHARGER_POWER_SENSORS`** in `pyscript/ev_strategy.py` so the [SoC and mapping-mismatch watchdog](INTEGRATION.md#soc-staleness-handling) covers the new charger. Record `(entity_id, unit)` — check the sensor's actual unit rather than assuming W; a wrong unit fails silently (the watchdog just never triggers, with no error) rather than loudly.
 
 ### Fault detection and PV Eco caveats
 

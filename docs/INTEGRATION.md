@@ -189,7 +189,7 @@ Configuration: `ev_fuse_guard_trip_a` / `_release_a` / `_trip_seconds` / `_hold_
 | PV Eco Status Publisher | `health.ts`, tracker command age, Kotiakku data age | health block in MQTT payload |
 | pyscript | `sensor.ev_strategy_heartbeat`, updated every minute | new sensor |
 | Fuse Guard | `binary_sensor.ev_fuse_guard` (state + `ts`/`blind` attributes) | already existed, now consumed |
-| SoC watchdog | `binary_sensor.ev_carN_soc_stale` | see below |
+| SoC watchdog | `binary_sensor.ev_carN_soc_stale`, `binary_sensor.ev_chargerN_mapping_mismatch` | see [SoC Staleness Handling](#soc-staleness-handling) |
 
 ### Mode-aware rules
 
@@ -209,13 +209,62 @@ The common card shows nothing when `ok` — silence is the design goal, not a mi
 
 ## SoC Staleness Handling
 
-Two complementary mechanisms, split by what's actually detectable:
+Two complementary mechanisms, split by what's actually detectable — and a
+hard-won distinction between them: only one of the two should ever *block*
+anything.
 
-**Freshness demotion** — a reading older than `ev_soc_max_age_hours` (default 26 h) is treated exactly like an unavailable sensor by every consumer (Coordinator → neutral 50, Planners → skip run, Boost → falls back to timeout-only end condition). Handles the case where an integration has simply stopped updating.
+**Freshness — reported, never blocking (v1.5).** A reading older than
+`ev_soc_max_age_hours` (default 26 h) is *visible* everywhere it matters
+(Planners report `soc_stale` / `soc_age_h` in the plan payload; Coordinator's
+`socOfCar()` still demotes a stale reading to a neutral `50` for priority
+mode, since a wrong priority pick is a minor and self-correcting cost; Boost
+falls back to timeout-only) — but **no consumer refuses to act because of
+it.** The Planners used to skip the run entirely on a stale reading; that
+was removed after it produced a live, self-sealing failure: stale → skip →
+no charge → car never wakes → still stale, indefinitely, with the only
+escape being the owner manually driving the car. The sensor is
+change-driven, not polling — "old" means "the car hasn't moved", not "the
+value is wrong" — so trusting it and letting the next charge naturally
+refresh it is both safer and simpler than refusing to plan. See
+`planner_car1.js` / `planner_car2.js` for the full reasoning.
 
-**Frozen-while-charging watchdog** (pyscript, minute cron) — the only case where staleness is *provable* rather than merely suspicious: a charger measurably delivering power (>1 kW) to its assigned car for 60 minutes while that car's SoC reading doesn't rise. Physics says it must move if energy is flowing; if it doesn't, `binary_sensor.ev_carN_soc_stale` is raised. Detection only — it never acts on charging, purely a health signal. Mapping-aware: a mid-session car reassignment resets the measurement window rather than producing a false flag.
+**Frozen-while-charging watchdog** (pyscript, minute cron) — the only case
+where staleness is *provable* rather than merely suspicious, and the reason
+a block was never needed in the first place: a charger measurably
+delivering power to its assigned car, while that car's SoC reading doesn't
+rise **in proportion to the energy delivered**. Judged against energy, not
+a wall clock (delivered kWh vs. capacity → expected % gain), because a
+fixed timer cannot serve both a 16 A grid session and a 6 A PV Eco session
+without being either twitchy on one or blind on the other — a session must
+clear both a minimum 20 minutes *and* a minimum 3% expected gain before any
+verdict is drawn, so a coarse or laggy SoC report is never mistaken for a
+stalled one. If the assigned car falls behind (actual gain <35% of owed),
+`binary_sensor.ev_carN_soc_stale` is raised. Detection only — never acts on
+charging.
 
-Both surface as **degraded**, never fault — the system continues safely on its fallback; the point is telling you the input has gone quiet, not that anything downstream broke.
+**Mapping-mismatch inference** — the same watchdog cycle, extended.
+A frozen assigned car alone is ambiguous (dead integration? sleeping car?
+wrong plug?). But if the **other** car gained roughly what this charger
+delivered (≥50% of owed) — and that car's own charger isn't simultaneously
+delivering power, ruling out the innocent explanation of it charging
+independently — that is unambiguous: the other car is the one actually
+plugged into this charger. `binary_sensor.ev_chargerN_mapping_mismatch`
+is raised, carrying the evidence as attributes (`assigned_car`,
+`rising_car`, `energy_delivered_kwh`, `expected_gain_pct`,
+`other_charger_confirmed_idle`, …) so the health badge can name the
+specific, actionable remedy — swap the assignment — rather than a generic
+warning. Requires `CHARGER_POWER_SENSORS` configured for **both** chargers
+to positively confirm the other charger is idle; with only one configured,
+`other_charger_confirmed_idle: false` records that the verdict rests on the
+energy-magnitude match alone. See [Step 5](FAST_FLOW.md#step-5--update-entity-ids-and-ip-addresses)
+for configuring these, including the **W vs kW trap** — a wrong unit is a
+silent 1000× error that makes a charger look permanently idle to this
+watchdog, with nothing anywhere reporting an error.
+
+All three surface as **degraded**, never fault — the system continues
+safely (or, for the freshness case, simply proceeds using the value it
+has); the point is telling you the input needs attention, not that
+anything downstream broke.
 
 ---
 
