@@ -49,13 +49,54 @@ CAR_SOC_SENSORS = {
     2: "sensor.car2_battery_soc",
 }
 
-# SoC-while-charging watchdog (Finding 5): per-charger power sensors.
-# A charger without a configured sensor is skipped by the watchdog.
+# SoC-while-charging watchdog: per-charger power sensors, as
+# (entity_id, unit). A charger without a configured sensor is skipped.
+#
+# THE UNITS GENUINELY DIFFER — go-e reports W, the Shelly reports kW. Read
+# naively that is a silent 1000x error in the worst possible direction: an
+# 11 kW session reads as "11", never crosses the 1000 W "really charging"
+# threshold, and the charger simply looks idle forever. No error, no flag,
+# the watchdog just quietly never runs for it. Hence the unit is declared
+# per sensor and every read goes through _charger_power_w().
 CHARGER_POWER_SENSORS = {
-    1: "sensor.garage_go_echarger_power_total",   # W
-    2: None,   # TopAC / Shelly power sensor — CHANGE-ME when known
+    1: ("sensor.garage_go_echarger_power_total", "W"),
+    2: ("sensor.ev_charger_power", "kW"),
 }
 SOC_WATCHDOG_MIN_POWER_W = 1000    # "really charging" threshold
+
+_power_unit_warned = set()
+
+
+def _charger_power_w(charger_n):
+    """Charger power in WATTS regardless of the sensor's own unit, or None
+    if no sensor is configured. Cross-checks the declared unit against
+    Home Assistant's own unit_of_measurement and warns once per entity on
+    disagreement — a unit that silently changes under us is exactly the
+    failure this indirection exists to prevent."""
+    entry = CHARGER_POWER_SENSORS.get(charger_n)
+    if not entry:
+        return None
+    entity, unit = entry
+    try:
+        raw = float(_get(entity, 0) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+    ha_unit = None
+    try:                                   # attribute read must never break
+        attrs = state.getattr(entity)      # the watchdog itself
+        if attrs:
+            ha_unit = attrs.get("unit_of_measurement")
+    except Exception:
+        pass
+    if ha_unit and ha_unit != unit and entity not in _power_unit_warned:
+        _power_unit_warned.add(entity)
+        log.warning(f"ev_strategy: {entity} declared as {unit} but Home "
+                    f"Assistant reports {ha_unit} — power readings for "
+                    f"charger {charger_n} may be off by 1000x; fix "
+                    f"CHARGER_POWER_SENSORS")
+
+    return raw * 1000.0 if unit == "kW" else raw
 
 # Per-car usable capacity — converts delivered kWh into expected SoC %.
 CAR_BATTERY_KWH = {1: 78, 2: 75}
@@ -379,13 +420,10 @@ def _soc_watchdog():
     mismatch = {}                          # keyed by CHARGER
     evidence = {}                          # keyed by CHARGER
 
-    for charger_n, power_sensor in CHARGER_POWER_SENSORS.items():
-        if not power_sensor:
-            continue
-        try:
-            power_w = float(_get(power_sensor, 0) or 0)
-        except (TypeError, ValueError):
-            power_w = 0
+    for charger_n in CHARGER_POWER_SENSORS:
+        power_w = _charger_power_w(charger_n)   # normalised to W
+        if power_w is None:
+            continue                            # no sensor configured
         car_n = _assigned_car(charger_n)
         soc = _soc_raw(car_n) if car_n else None
 
@@ -433,13 +471,9 @@ def _soc_watchdog():
         # charging on its OWN charger at the same time, which would explain
         # its gain without implying anything about our mapping.
         other_charger = _charger_of_car(other_car)
-        other_sensor = CHARGER_POWER_SENSORS.get(other_charger) if other_charger else None
-        if other_sensor:
-            try:
-                if float(_get(other_sensor, 0) or 0) >= SOC_WATCHDOG_MIN_POWER_W:
-                    continue               # both charging — proves nothing
-            except (TypeError, ValueError):
-                pass
+        other_power_w = _charger_power_w(other_charger) if other_charger else None
+        if other_power_w is not None and other_power_w >= SOC_WATCHDOG_MIN_POWER_W:
+            continue                       # both charging — proves nothing
 
         mismatch[charger_n] = True
         evidence[charger_n] = {
@@ -453,7 +487,7 @@ def _soc_watchdog():
             # False → the other charger has no power sensor configured, so
             # "both charging simultaneously" could not be positively ruled
             # out; the verdict rests on the energy-magnitude match alone.
-            "other_charger_confirmed_idle": bool(other_sensor),
+            "other_charger_confirmed_idle": other_power_w is not None,
         }
 
     for car_n in (1, 2):
