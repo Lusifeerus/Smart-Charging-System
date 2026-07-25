@@ -1,0 +1,262 @@
+[
+    {
+        "id": "e3d4f20a8eee4a28",
+        "type": "tab",
+        "label": "go-e PV",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "eca872b6bd970c60",
+        "type": "api-current-state",
+        "z": "e3d4f20a8eee4a28",
+        "name": "Grid Power (W)",
+        "server": "628be9abfc84199d",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "sensor.p1_meter_power",
+        "state_type": "str",
+        "blockInputOverrides": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entity"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "override_topic": false,
+        "state_location": "payload",
+        "override_payload": "msg",
+        "entity_location": "data",
+        "override_data": "msg",
+        "x": 820,
+        "y": 360,
+        "wires": [
+            [
+                "41ef735aa4b211f3"
+            ]
+        ]
+    },
+    {
+        "id": "8e9744dae9c82809",
+        "type": "debug",
+        "z": "e3d4f20a8eee4a28",
+        "name": "debug 3",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "url",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1200,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "41ef735aa4b211f3",
+        "type": "function",
+        "z": "e3d4f20a8eee4a28",
+        "name": "PV Data",
+        "func": "let p = 0;\np = msg.payload;\nlet j = '{\"pGrid\": '+p+', \"pPv\": 0, \"pAkku\": 0}';\nmsg.url = \"http://192.168.1.60/api/set?ids=\"+j;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 360,
+        "wires": [
+            [
+                "8e9744dae9c82809",
+                "f65367c265931cf7"
+            ]
+        ]
+    },
+    {
+        "id": "f65367c265931cf7",
+        "type": "http request",
+        "z": "e3d4f20a8eee4a28",
+        "name": "",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": false,
+        "url": "",
+        "persist": false,
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1210,
+        "y": 360,
+        "wires": [
+            [
+                "aacda04396cf95c0"
+            ]
+        ]
+    },
+    {
+        "id": "aacda04396cf95c0",
+        "type": "debug",
+        "z": "e3d4f20a8eee4a28",
+        "name": "debug 4",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1360,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "4d30b3e5496b491c",
+        "type": "inject",
+        "z": "e3d4f20a8eee4a28",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "5",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 250,
+        "y": 360,
+        "wires": [
+            [
+                "a23ba7cb15cbbdca"
+            ]
+        ]
+    },
+    {
+        "id": "a23ba7cb15cbbdca",
+        "type": "http request",
+        "z": "e3d4f20a8eee4a28",
+        "name": "",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://192.168.1.60/api/status?filter=lmo,amp,frc,car",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 410,
+        "y": 360,
+        "wires": [
+            [
+                "9d33ba7bd16715d3"
+            ]
+        ]
+    },
+    {
+        "id": "9d33ba7bd16715d3",
+        "type": "switch",
+        "z": "e3d4f20a8eee4a28",
+        "name": "logicMode",
+        "property": "payload.lmo",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "3",
+                "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "4",
+                "vt": "num"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 570,
+        "y": 360,
+        "wires": [
+            [],
+            [
+                "eca872b6bd970c60"
+            ]
+        ]
+    },
+    {
+        "id": "c24acf12dcf50505",
+        "type": "comment",
+        "z": "e3d4f20a8eee4a28",
+        "name": "logic mode (Default=3, Awattar=4)",
+        "info": "",
+        "x": 640,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "628be9abfc84199d",
+        "type": "server",
+        "name": "Home Assistant",
+        "version": 6,
+        "addon": false,
+        "rejectUnauthorizedCerts": false,
+        "ha_boolean": [
+            "y",
+            "yes",
+            "true",
+            "on",
+            "home",
+            "open"
+        ],
+        "connectionDelay": true,
+        "cacheJson": true,
+        "heartbeat": false,
+        "heartbeatInterval": "30",
+        "areaSelector": "friendlyName",
+        "deviceSelector": "friendlyName",
+        "entitySelector": "friendlyName",
+        "statusSeparator": ": ",
+        "statusYear": "hidden",
+        "statusMonth": "short",
+        "statusDay": "numeric",
+        "statusHourCycle": "default",
+        "statusTimeFormat": "h:m",
+        "enableGlobalContextStore": true
+    },
+    {
+        "id": "fde00feb0182e6c5",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.80.3"
+        }
+    }
+]

@@ -1,0 +1,133 @@
+# =============================================================================
+# EV Charging — HA Helpers
+# =============================================================================
+
+input_number:
+
+  ev_super_cheap_threshold:
+    name: EV Super Cheap Threshold
+    initial: 1
+    min: -10
+    max: 100
+    step: 0.1
+    unit_of_measurement: "c/kWh"
+    icon: mdi:cash-fast
+
+  ev_car1_target_soc_normal:
+    name: EV Car 1 Target SoC (Normal)
+    initial: 80
+    min: 10
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-70
+  ev_car2_target_soc_normal:
+    name: EV Car 2 Target SoC (Normal)
+    initial: 80
+    min: 10
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-70
+
+  ev_car1_target_soc_trip:
+    name: EV Car 1 Target SoC (Trip)
+    initial: 90
+    min: 10
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-100
+  ev_car2_target_soc_trip:
+    name: EV Car 2 Target SoC (Trip)
+    initial: 100
+    min: 10
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-100
+
+  ev_car1_target_soc_minimal:
+    name: EV Car 1 Target SoC (Minimal)
+    initial: 40
+    min: 10
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-30
+  ev_car2_target_soc_minimal:
+    name: EV Car 2 Target SoC (Minimal)
+    initial: 40
+    min: 10
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-30
+
+input_select:
+
+  ev_charging_mode:
+    name: EV Charging Mode
+    options:
+      - scheduled
+      - manual
+    initial: scheduled
+    icon: mdi:calendar-clock
+
+  ev_charging_lb:
+    name: EV Charging Load Balancing
+    options:
+      - automatic
+      - manual
+    initial: automatic
+    icon: mdi:flash-auto
+
+  ev_priority:
+    name: EV Priority Mode
+    options:
+      - SoC Smart
+      - Manual Car 1
+      - Manual Car 2
+    initial: SoC Smart
+    icon: mdi:car-electric
+
+  ev_car1_mode:
+    name: EV Car 1 Charging Mode
+    options:
+      - minimal
+      - normal
+      - trip
+    initial: normal
+    icon: mdi:car-electric
+  ev_car2_mode:
+    name: EV Car 2 Charging Mode
+    options:
+      - minimal
+      - normal
+      - trip
+    initial: normal
+    icon: mdi:car-electric
+
+input_text:
+
+  ev_car1_deadline_time:
+    name: EV Car 1 Deadline Time
+    icon: mdi:clock
+    pattern: "^[0-2][0-9]:[0-5][0-9]$"
+    initial: "07:00"
+  ev_car2_deadline_time:
+    name: EV Car 2 Deadline Time
+    icon: mdi:clock
+    pattern: "^[0-2][0-9]:[0-5][0-9]$"
+    initial: "07:00"
+
+  ev_car1_name:
+    name: "EV Car 1 display name"
+    initial: "Car 1"       # CHANGE-ME  e.g. "Volvo C40"
+    max: 32
+    icon: mdi:car-electric
+  ev_car2_name:
+    name: "EV Car 2 display name"
+    initial: "Car 2"       # CHANGE-ME  e.g. "EV Charger"
+    max: 32
+    icon: mdi:car-electric

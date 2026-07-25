@@ -1,0 +1,169 @@
+# =============================================================================
+# EV Charging — Safety Package (Fuse Guard + Boost Independent Cutoff)
+# Add as a package alongside the other ev_*.yaml files.
+#
+# Contains:
+#   1. Fuse Guard tuning helpers (read by the fuse_guard.js Node-RED node;
+#      the node has identical built-in defaults, so deployment order is free)
+#   2. MQTT binary sensor mirroring the guard's retained status topic
+#   3. Notification automations: guard trip, guard sensor blindness
+#   4. Boost independent cutoff — same philosophy as the preheater's 2 h
+#      safety automation: a plain HA automation that does not trust
+#      pyscript to be alive. If a boost flag stays on longer than the
+#      configured duration + 30 min margin, it is force-cleared and the
+#      failure is reported (a firing cutoff means the pyscript watchdog
+#      missed BOTH of its end conditions — that is a bug to investigate).
+#
+# NOTE on band structure: LB manages to GRID_LIMIT = 35 A as its budget,
+# so a loaded phase legitimately sits at ~34-35 A in Fast mode. Trip must
+# stay ABOVE that envelope (39 A default), release BELOW the operating
+# point (31 A default). Do not tune trip into the 33-35 A range or the
+# guard will fight normal LB operation.
+# =============================================================================
+
+input_number:
+
+  ev_fuse_guard_trip_a:
+    name: "Fuse guard trip current"
+    initial: 39            # above LB envelope (35 A budget); within 35 A gG tolerance for the sustain window
+    min: 36
+    max: 50
+    step: 0.5
+    unit_of_measurement: "A"
+    icon: mdi:fuse-alert
+
+  ev_fuse_guard_release_a:
+    name: "Fuse guard release current"
+    initial: 31            # below LB operating point so the guard actually lets go
+    min: 20
+    max: 35
+    step: 0.5
+    unit_of_measurement: "A"
+    icon: mdi:fuse
+
+  ev_fuse_guard_trip_seconds:
+    name: "Fuse guard trip sustain"
+    initial: 30            # long enough for LB's own correction cycle to act first
+    min: 5
+    max: 300
+    step: 5
+    unit_of_measurement: "s"
+    icon: mdi:timer-alert-outline
+
+  ev_fuse_guard_hold_minutes:
+    name: "Fuse guard release hold"
+    initial: 5
+    min: 1
+    max: 60
+    step: 1
+    unit_of_measurement: "min"
+    icon: mdi:timer-sand
+
+mqtt:
+  binary_sensor:
+    - name: "EV Fuse Guard"
+      unique_id: ev_fuse_guard
+      default_entity_id: binary_sensor.ev_fuse_guard
+      state_topic: "ev/fuse_guard"
+      value_template: "{{ 'ON' if value_json.active else 'OFF' }}"
+      device_class: problem
+      json_attributes_topic: "ev/fuse_guard"
+      icon: mdi:fuse-alert
+
+automation:
+
+  # ── Fuse guard tripped — loud by design ─────────────────────────────────
+  # If LB was automatic when this fired, LB itself has a defect: the guard
+  # band sits above anything correct LB operation allows.
+  - id: ev_fuse_guard_tripped
+    alias: "EV: fuse guard tripped"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.ev_fuse_guard
+        to: "on"
+    actions:
+      - action: persistent_notification.create
+        data:
+          notification_id: ev_fuse_guard
+          title: "⚡ EV Fuse Guard TRIPPED"
+          message: >
+            Max phase {{ state_attr('binary_sensor.ev_fuse_guard','max_a') }} A —
+            both chargers shed. LB mode was
+            {{ states('input_select.ev_charging_lb') }}
+            ({{ 'LB DEFECT — investigate' if states('input_select.ev_charging_lb') == 'automatic'
+                else 'unmanaged-mode backstop, working as designed' }}).
+            If the phase stays high, the remaining load is non-EV.
+      # Swap/add your notify service here, e.g.:
+      # - action: notify.mobile_app_xxx
+      #   data: { title: "EV Fuse Guard TRIPPED", message: "Chargers shed" }
+
+  # ── Fuse guard blind (phase sensors unavailable) ────────────────────────
+  # The guard does NOT trip on blindness (availability must not strand the
+  # cars) — but unsupervised PV Eco is exactly the gap it exists to close,
+  # so blindness deserves a notification.
+  - id: ev_fuse_guard_blind
+    alias: "EV: fuse guard blind"
+    mode: single
+    triggers:
+      - trigger: template
+        value_template: >
+          {{ state_attr('binary_sensor.ev_fuse_guard', 'blind') == true }}
+        for: "00:02:00"
+    actions:
+      - action: persistent_notification.create
+        data:
+          notification_id: ev_fuse_guard_blind
+          title: "EV Fuse Guard: phase sensors unavailable"
+          message: >
+            P1 phase-current sensors unreadable for 2 min — overload
+            protection is inactive. Check the P1 meter integration.
+
+  # ── Boost independent cutoff (Finding 1) ────────────────────────────────
+  # Plain HA automations, independent of pyscript — preheater pattern.
+  # Cutoff = configured boost duration + 30 min margin. pyscript should
+  # always end the boost first (target SoC or timeout); these firing
+  # means pyscript is dead or wedged.
+  - id: ev_boost_cutoff_car1
+    alias: "EV: boost safety cutoff car 1"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.ev_car1_boost
+        to: "on"
+        for: >
+          {{ ((states('input_number.ev_boost_duration_hours') | float(3)) + 0.5) * 3600 }}
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_car1_boost
+      - action: persistent_notification.create
+        data:
+          notification_id: ev_boost_cutoff_1
+          title: "EV Boost safety cutoff (Car 1)"
+          message: >
+            Boost force-ended by the independent cutoff — the pyscript
+            watchdog missed both end conditions. Check pyscript
+            (ev_strategy.py) health.
+
+  - id: ev_boost_cutoff_car2
+    alias: "EV: boost safety cutoff car 2"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.ev_car2_boost
+        to: "on"
+        for: >
+          {{ ((states('input_number.ev_boost_duration_hours') | float(3)) + 0.5) * 3600 }}
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ev_car2_boost
+      - action: persistent_notification.create
+        data:
+          notification_id: ev_boost_cutoff_2
+          title: "EV Boost safety cutoff (Car 2)"
+          message: >
+            Boost force-ended by the independent cutoff — the pyscript
+            watchdog missed both end conditions. Check pyscript
+            (ev_strategy.py) health.

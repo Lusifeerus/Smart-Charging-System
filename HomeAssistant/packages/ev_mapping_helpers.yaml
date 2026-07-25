@@ -1,0 +1,45 @@
+# =============================================================================
+# EV Charging — Car ↔ Charger Assignment Helpers (Phase 1)
+# Add alongside ev_helpers.yaml (same package / configuration.yaml include).
+#
+# These are the SINGLE SOURCE OF TRUTH for which car is plugged into which
+# charger. Every flow component that previously hardcoded the pairing
+# (Coordinator, Evaluator, Planners, Status Publisher) now resolves it here.
+#
+# Semantics:
+#   "Car 1" / "Car 2"  → that car's SoC, schedule and priority apply to
+#                        this charger
+#   "None"             → guest mode: unknown car. No schedule is enforced
+#                        (charging allowed when plugged in), load balancing
+#                        still supervises current, SoC treated as neutral 50%
+#
+# Defaults reproduce the legacy hardcoded mapping:
+#   charger 1 (go-e, 192.168.1.XX — CHANGE ME)     → Car 1
+#   charger 2 (Shelly TopAC, .1.37)    → Car 2
+# so deploying these helpers alone changes nothing.
+#
+# Exclusivity (one car cannot be on two chargers) is enforced by
+# ev_mapping_automations.yaml — input_select has no native constraint.
+# If both helpers ever claim the same car (automation disabled/failed),
+# the flow resolvers deterministically pick charger 1.
+# =============================================================================
+
+input_select:
+
+  ev_charger1_car:
+    name: EV Charger 1 Car
+    options:
+      - "Car 1"
+      - "Car 2"
+      - "None"
+    initial: "Car 1"
+    icon: mdi:ev-station
+
+  ev_charger2_car:
+    name: EV Charger 2 Car
+    options:
+      - "Car 1"
+      - "Car 2"
+      - "None"
+    initial: "Car 2"
+    icon: mdi:ev-station

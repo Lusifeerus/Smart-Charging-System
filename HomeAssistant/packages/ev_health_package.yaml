@@ -1,0 +1,243 @@
+# =============================================================================
+# EV Charging — System Health Package (Finding 4)
+# Add as a package alongside the other ev_*.yaml files.
+#
+# One aggregated health signal: sensor.ev_system_health
+#   state:      ok | degraded | fault
+#   attributes: faults[], degraded[], summary, per-source ages
+#
+# ARCHITECTURE: the aggregator lives in an HA template sensor because the
+# aggregator must not run inside a monitored runtime — Node-RED and pyscript
+# are both patients here; HA core is the most reliable runtime in the stack
+# and is where the card badge reads from anyway.
+#
+# MODE-AWARE RULES (what keeps the badge trustworthy instead of noisy):
+#   - PV chain / tracker silence is a fault ONLY while strategy is pv_eco
+#     (in fast mode a silent tracker is correct behaviour)
+#   - pyscript staleness is degraded normally, escalating to FAULT while a
+#     boost is active (the watchdog owns boost end conditions)
+#   - FMI staleness is degraded at most: the Slow Planner falls back to
+#     Solcast BY DESIGN — a working fallback is not a fault
+#   - Fast-chain silence, guard silence/blindness/shedding, and a missing
+#     Nord Pool ranking are always faults
+#
+# Notification policy (as agreed): notify on fault sustained 2 min (skips
+# restart transients); degraded is badge-only. Recovery dismisses.
+#
+# Thresholds: chain-freshness limits are set relative to publish cadence
+# (both publishers run on the ~10-30 s control cadence; 300 s allows for
+# restarts). FMI reuses the existing ev_pv_fmi_max_age_hours helper.
+# =============================================================================
+
+input_number:
+
+  ev_soc_max_age_hours:
+    name: "EV SoC max reading age"
+    initial: 26            # a day + margin: integrations poll at least daily even parked
+    min: 2
+    max: 96
+    step: 1
+    unit_of_measurement: "h"
+    icon: mdi:battery-clock
+
+template:
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/1"
+      - trigger: state
+        entity_id: binary_sensor.ev_fuse_guard
+    sensor:
+      - name: "EV System Health"
+        unique_id: ev_system_health
+        default_entity_id: sensor.ev_system_health
+        icon: >
+          {% if this.state == 'fault' %}mdi:alert-circle
+          {% elif this.state == 'degraded' %}mdi:alert
+          {% else %}mdi:check-circle{% endif %}
+        state: >
+          {% set a = this.attributes %}
+          {% if (a.get('faults') or []) | count > 0 %}fault
+          {% elif (a.get('degraded') or []) | count > 0 %}degraded
+          {% else %}ok{% endif %}
+        attributes:
+          faults: >
+            {% set ns = namespace(f=[]) %}
+            {% set now_ts = as_timestamp(now()) %}
+            {% set pv_active = is_state('input_select.ev_charging_strategy', 'pv_eco') %}
+            {% set boosting = is_state('input_boolean.ev_car1_boost', 'on')
+                           or is_state('input_boolean.ev_car2_boost', 'on') %}
+
+            {# ── Fuse guard: always critical ── #}
+            {% set g = states['binary_sensor.ev_fuse_guard'] %}
+            {% if g is none or g.state in ['unknown', 'unavailable'] %}
+              {% set ns.f = ns.f + ['Fuse guard sensor missing'] %}
+            {% else %}
+              {% set gts = as_timestamp(g.attributes.get('ts'), 0) %}
+              {% if now_ts - gts > 180 %}
+                {% set ns.f = ns.f + ['Fuse guard silent ' ~ ((now_ts - gts) / 60) | round(0) | int ~ ' min'] %}
+              {% endif %}
+              {% if g.attributes.get('blind') %}
+                {% set ns.f = ns.f + ['Fuse guard blind (P1 sensors)'] %}
+              {% endif %}
+              {% if g.state == 'on' %}
+                {% set ns.f = ns.f + ['Fuse guard SHEDDING'] %}
+              {% endif %}
+            {% endif %}
+
+            {# ── Fast flow chain: always required ── #}
+            {% set h = state_attr('sensor.ev_charging_status', 'health') %}
+            {% if h is none %}
+              {% set ns.f = ns.f + ['Fast flow: no health data (old publisher?)'] %}
+            {% else %}
+              {% set fts = as_timestamp(h.get('ts'), 0) %}
+              {% if now_ts - fts > 300 %}
+                {% set ns.f = ns.f + ['Fast flow silent ' ~ ((now_ts - fts) / 60) | round(0) | int ~ ' min'] %}
+              {% endif %}
+              {% if (h.get('slots_count') or 0) == 0 %}
+                {% set ns.f = ns.f + ['No Nord Pool slots'] %}
+              {% elif (h.get('nordpool_age_s') or 0) > 108000 %}
+                {% set ns.f = ns.f + ['Nord Pool ranking ' ~ ((h.get('nordpool_age_s')) / 3600) | round(0) | int ~ ' h old'] %}
+              {% endif %}
+            {% endif %}
+
+            {# ── PV chain: fault only while strategy is pv_eco ── #}
+            {% if pv_active %}
+              {% set ph = state_attr('sensor.ev_pv_eco_status', 'health') %}
+              {% if ph is none %}
+                {% set ns.f = ns.f + ['PV chain: no health data'] %}
+              {% else %}
+                {% set pts = as_timestamp(ph.get('ts'), 0) %}
+                {% if now_ts - pts > 300 %}
+                  {% set ns.f = ns.f + ['PV chain silent ' ~ ((now_ts - pts) / 60) | round(0) | int ~ ' min'] %}
+                {% elif (ph.get('tracker_cmd_age_s') or 0) > 600 %}
+                  {% set ns.f = ns.f + ['PV tracker silent ' ~ ((ph.get('tracker_cmd_age_s')) / 60) | round(0) | int ~ ' min'] %}
+                {% endif %}
+              {% endif %}
+            {% endif %}
+
+            {# ── pyscript: fault only while a boost is active ── #}
+            {% set hb = as_timestamp(states('sensor.ev_strategy_heartbeat'), 0) %}
+            {% if boosting and now_ts - hb > 180 %}
+              {% set ns.f = ns.f + ['pyscript dead during BOOST'] %}
+            {% endif %}
+
+            {# ── Charger hardware fault (go-e "err" != None) — always a
+                 fault, unconditional on mode: a broken charger matters
+                 regardless of which strategy is active. Read from the
+                 Fast Flow status payload, which polls err every cycle
+                 regardless of strategy (assembler runs unconditionally). #}
+            {% for n in [1, 2] %}
+              {% set cn = 'car' ~ n %}
+              {% set cfault = state_attr('sensor.ev_charging_status', cn) %}
+              {% if cfault is not none and (cfault.status or '') | string
+                    is match('^Fault:') %}
+                {% set ns.f = ns.f + ['Charger (car ' ~ n ~ '): ' ~ cfault.status] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.f }}
+          degraded: >
+            {% set ns = namespace(d=[]) %}
+            {% set now_ts = as_timestamp(now()) %}
+            {% set pv_active = is_state('input_select.ev_charging_strategy', 'pv_eco') %}
+            {% set boosting = is_state('input_boolean.ev_car1_boost', 'on')
+                           or is_state('input_boolean.ev_car2_boost', 'on') %}
+
+            {# ── pyscript stale (not boosting → degraded) ── #}
+            {% set hb = as_timestamp(states('sensor.ev_strategy_heartbeat'), 0) %}
+            {% if not boosting and now_ts - hb > 180 %}
+              {% set ns.d = ns.d + ['pyscript heartbeat ' ~ ((now_ts - hb) / 60) | round(0) | int ~ ' min old'] %}
+            {% endif %}
+
+            {# ── Kotiakku cloud data stale (pv_eco only) ── #}
+            {% if pv_active %}
+              {% set ph = state_attr('sensor.ev_pv_eco_status', 'health') %}
+              {% if ph is not none and (ph.get('data_age_s') or 0) > 900 %}
+                {% set ns.d = ns.d + ['Battery cloud data ' ~ ((ph.get('data_age_s')) / 60) | round(0) | int ~ ' min old'] %}
+              {% endif %}
+            {% endif %}
+
+            {# ── Car SoC: not-tracking-delivered-energy watchdog + idle age ── #}
+            {% set max_soc_h = states('input_number.ev_soc_max_age_hours') | float(26) %}
+            {% for n in [1, 2] %}
+              {% if is_state('binary_sensor.ev_car' ~ n ~ '_soc_stale', 'on') %}
+                {% set ns.d = ns.d + ['Car ' ~ n ~ ' SoC not tracking charge'] %}
+              {% endif %}
+              {% set age = state_attr('sensor.ev_strategy_heartbeat', 'car' ~ n ~ '_soc_age_h') %}
+              {% if age is not none and age | float(0) > max_soc_h %}
+                {% set ns.d = ns.d + ['Car ' ~ n ~ ' SoC data ' ~ age | float | round(0) | int ~ ' h old'] %}
+              {% endif %}
+            {% endfor %}
+
+            {# ── Car↔charger mapping mismatch (roadmap step 3) ──────────── #}
+            {# The assigned car is not gaining the energy this charger is    #}
+            {# delivering, but the OTHER car is — i.e. the plug and the      #}
+            {# assignment disagree. Named explicitly because the remedy is   #}
+            {# a specific user action: swap the assignment on the car card.  #}
+            {% for n in [1, 2] %}
+              {% if is_state('binary_sensor.ev_charger' ~ n ~ '_mapping_mismatch', 'on') %}
+                {% set rising = state_attr('binary_sensor.ev_charger' ~ n ~ '_mapping_mismatch', 'rising_car') %}
+                {% set ns.d = ns.d + ['Charger ' ~ n ~ ' mapping mismatch — Car ' ~ (rising | default('?')) ~ ' appears to be the one plugged in'] %}
+              {% endif %}
+            {% endfor %}
+
+            {# ── FMI stale → Solcast fallback working as designed ── #}
+            {% set fmi_issued = state_attr('sensor.fmi_pv_remaining_today_kwh', 'issued_at') %}
+            {% set fmi_max_h = states('input_number.ev_pv_fmi_max_age_hours') | float(6) %}
+            {% if fmi_issued is not none %}
+              {% if now_ts - as_timestamp(fmi_issued, 0) > fmi_max_h * 3600 %}
+                {% set ns.d = ns.d + ['FMI forecast stale (Solcast fallback)'] %}
+              {% endif %}
+            {% elif pv_active %}
+              {% set ns.d = ns.d + ['FMI forecast sensor missing'] %}
+            {% endif %}
+            {{ ns.d }}
+          summary: >
+            {% set f = this.attributes.get('faults') or [] %}
+            {% set d = this.attributes.get('degraded') or [] %}
+            {% if f | count > 0 %}{{ f | first }}{% if f | count > 1 %} (+{{ f | count - 1 }}){% endif %}
+            {% elif d | count > 0 %}{{ d | first }}{% if d | count > 1 %} (+{{ d | count - 1 }}){% endif %}
+            {% else %}All systems OK{% endif %}
+          checked: "{{ now().isoformat() }}"
+
+automation:
+
+  - id: ev_health_fault
+    alias: "EV: system health fault"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: sensor.ev_system_health
+        to: "fault"
+        for: "00:02:00"
+    actions:
+      - action: persistent_notification.create
+        data:
+          notification_id: ev_system_health
+          title: "EV Charging: system FAULT"
+          message: >
+            {{ state_attr('sensor.ev_system_health', 'summary') }}
+            {% set f = state_attr('sensor.ev_system_health', 'faults') or [] %}
+            {% if f | count > 1 %}
+
+            All faults:
+            {% for x in f %}• {{ x }}
+            {% endfor %}{% endif %}
+      # Add your notify service here, e.g.:
+      # - action: notify.mobile_app_xxx
+      #   data:
+      #     title: "EV Charging FAULT"
+      #     message: "{{ state_attr('sensor.ev_system_health','summary') }}"
+
+  - id: ev_health_recovered
+    alias: "EV: system health recovered"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: sensor.ev_system_health
+        from: "fault"
+        to: "ok"
+        for: "00:02:00"
+    actions:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: ev_system_health

@@ -1,0 +1,323 @@
+# =============================================================================
+# PV Eco Charging — HA Helpers
+# Add to configuration.yaml (or include as a package).
+#
+# These drive the summer PV-surplus charging strategy. They are independent
+# of the winter scheduling helpers.
+# =============================================================================
+
+input_select:
+  # Top-level strategy switch — mutually exclusive
+  ev_charging_strategy:
+    name: "EV Charging Strategy"
+    options:
+      - "fast"      # Winter: Nord Pool scheduling + SoC load balancing
+      - "pv_eco"    # Summer: PV surplus tracking
+    initial: "fast"
+    icon: mdi:solar-power-variant
+
+input_number:
+  # ---- Battery reserve (hard floor) ----
+  ev_pv_battery_reserve_kw:
+    name: "PV battery reserve (manual floor)"
+    initial: 0.5
+    min: 0
+    max: 11
+    step: 0.5
+    unit_of_measurement: "kW"
+    icon: mdi:home-battery
+    mode: box
+
+  # ---- Battery specs (for the slow planner) ----
+  # v1.1: planner now uses kWh-per-SoC-% directly (measured); the capacity
+  # helper below is OBSOLETE and can be deleted from HA (kept here only so
+  # existing installs don't error on a missing entity reference).
+  ev_pv_kwh_per_soc_percent:
+    name: "PV battery kWh per SoC percent"
+    initial: 0.34          # measured: energy-in vs SoC rise, pooled 4 days (0.344)
+    min: 0.10
+    max: 0.60
+    step: 0.01
+    unit_of_measurement: "kWh/%"
+    icon: mdi:battery-sync
+    mode: box
+  ev_pv_battery_max_rate_kw:
+    name: "PV home battery max charge rate"
+    initial: 10            # 2× LUNA2000 ~5 kW each; data PV-limited so unconfirmed — adjust if needed
+    min: 1
+    max: 20
+    step: 0.5
+    unit_of_measurement: "kW"
+    icon: mdi:battery-charging-high
+    mode: box
+
+  ev_pv_grid_charge_threshold_kw:
+    name: "PV operator grid-charge detection threshold"
+    initial: 0.8           # noise ceiling ~0.57 kW; real charging 3.6+ kW
+    min: 0.3
+    max: 3.0
+    step: 0.1
+    unit_of_measurement: "kW"
+    icon: mdi:transmission-tower-import
+
+  ev_pv_battery_full_threshold:
+    name: "PV home battery full threshold"
+    initial: 96            # operator's effective full; above this battery stops accepting → track grid export
+    min: 80
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-100
+
+  # ---- Control loop tuning ----
+  ev_pv_gain:
+    name: "PV tracker gain"
+    initial: 0.4
+    min: 0.05
+    max: 1.0
+    step: 0.05
+    icon: mdi:tune-variant
+    mode: box
+  ev_pv_deadband_kw:
+    name: "PV tracker deadband"
+    initial: 0.7
+    min: 0.1
+    max: 2.0
+    step: 0.1
+    unit_of_measurement: "kW"
+    icon: mdi:arrow-expand-horizontal
+    mode: box
+  ev_pv_min_hold_minutes:
+    name: "PV minimum-charge hold time"
+    initial: 4
+    min: 0
+    max: 30
+    step: 1
+    unit_of_measurement: "min"
+    icon: mdi:timer-sand
+
+  # ---- Start / continue hysteresis ----
+  # START: sustained surplus must exceed this before a charge session begins.
+  # Set above the car's 1-phase minimum (~1.4 kW) plus battery reserve so that
+  # starting never immediately pulls from the home battery. Tune with real data.
+  ev_pv_start_threshold_kw:
+    name: "PV start threshold (sustained surplus)"
+    initial: 2.0
+    min: 0.5
+    max: 6.0
+    step: 0.1
+    unit_of_measurement: "kW"
+    icon: mdi:play-circle-outline
+    mode: box
+  ev_pv_start_sustain_readings:
+    name: "PV start sustain (distinct API readings)"
+    initial: 2              # each reading is ALREADY a 5-min average (sustained
+                            # evidence in itself) → 2 distinct windows ≈ 10 min.
+                            # 3 was over-conservative: it treated averaged
+                            # readings like instant samples needing corroboration.
+    min: 1
+    max: 10
+    step: 1
+    unit_of_measurement: "readings"
+    icon: mdi:timer-check-outline
+  # CONTINUE: once charging, keep going while surplus stays above this lower
+  # floor. Lower than the start threshold (hysteresis) so brief dips don't
+  # stop charging; the cloud-bridge hold covers momentary discharge.
+  ev_pv_continue_threshold_kw:
+    name: "PV continue threshold"
+    initial: 0.3
+    min: 0.0
+    max: 3.0
+    step: 0.1
+    unit_of_measurement: "kW"
+    icon: mdi:play-pause
+
+  # ---- Rate limiting (prevents overshoot from the cloud-API feedback lag) ----
+  # The car must not chase surplus faster than solar_to_battery can reflect its
+  # own change (~300 s API lag), or it ramps to the rail and slams back in a
+  # ~10-min limit cycle. Step a few amps at a time, once per interval, so the
+  # car walks to the balance point (~8-10 A) and settles there.
+  ev_pv_max_amp_step:
+    name: "PV max amp change per adjustment"
+    initial: 4              # safety cap only — the stamp gate (one step per
+                            # fresh 5-min window) is the oscillation guard and
+                            # GAIN damps each step. At 1 this was the ramp
+                            # bottleneck: 6→16 A took ~10 windows (50-75 min).
+    min: 1
+    max: 6
+    step: 1
+    unit_of_measurement: "A"
+    icon: mdi:stairs
+  ev_pv_adjust_interval_seconds:
+    name: "PV amp adjustment interval"
+    initial: 60
+    min: 10
+    max: 300
+    step: 10
+    unit_of_measurement: "s"
+    icon: mdi:timer-cog-outline
+
+  # ============================================================
+  # Smart Slow Planner v1 — policy knobs (design note §3-4)
+  # ============================================================
+  ev_pv_evening_target_soc:
+    name: "PV evening battery target (baseline)"
+    initial: 80
+    min: 40
+    max: 96
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-clock
+  ev_pv_min_night_soc:
+    name: "PV minimum evening target floor"
+    initial: 40
+    min: 15
+    max: 96
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-low
+  ev_pv_tomorrow_sunny_discount:
+    name: "PV tomorrow-sunny target discount"
+    initial: 20            # lower tonight's target by this when tomorrow confidently high
+    min: 0
+    max: 50
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:weather-sunny
+  ev_pv_tomorrow_price_premium:
+    name: "PV tomorrow-expensive target premium"
+    initial: 15            # raise target when tomorrow poor or expensive
+    min: 0
+    max: 40
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:cash-plus
+  ev_pv_tomorrow_high_kwh:
+    name: "PV tomorrow 'confidently sunny' threshold"
+    initial: 45            # forecast_tomorrow above this = lower target (conservative)
+    min: 20
+    max: 70
+    step: 1
+    unit_of_measurement: "kWh"
+    icon: mdi:weather-sunny-alert
+    mode: box
+  ev_pv_tomorrow_low_kwh:
+    name: "PV tomorrow 'poor day' threshold"
+    initial: 25            # forecast_tomorrow below this = raise target
+    min: 5
+    max: 40
+    step: 1
+    unit_of_measurement: "kWh"
+    icon: mdi:weather-cloudy
+    mode: box
+  ev_pv_surplus_generous_kwh:
+    name: "PV surplus 'generous' budget"
+    initial: 10            # budget above this → reserve at low floor (car greedy)
+    min: 2
+    max: 30
+    step: 1
+    unit_of_measurement: "kWh"
+    icon: mdi:gauge-full
+    mode: box
+  ev_pv_reserve_low_floor_kw:
+    name: "PV reserve low floor (generous budget)"
+    initial: 1.0
+    min: 0.0
+    max: 3.0
+    step: 0.1
+    unit_of_measurement: "kW"
+    icon: mdi:arrow-collapse-down
+  ev_pv_house_baseload_kw:
+    name: "PV house baseload estimate"
+    initial: 1.3           # measured median (car excluded)
+    min: 0.3
+    max: 4.0
+    step: 0.1
+    unit_of_measurement: "kW"
+    icon: mdi:home-lightning-bolt
+  ev_pv_forecast_haircut:
+    name: "PV forecast optimism haircut"
+    initial: 0.9           # ×factor; both forecasters run ~+10% optimistic
+    min: 0.5
+    max: 1.0
+    step: 0.05
+    icon: mdi:scissors-cutting
+  # ============================================================
+  # v1.2 — Price-aware export gate (design note §6b)
+  # ============================================================
+  # Sustained-export detection via the fast local P1 meter. Balancing events
+  # measured at ~10 s single pulses (~10 kW); deliberate sells >=15 min at
+  # 1-4 kW — so even a 60 s sustain fully excludes balancing. 120 s default
+  # is comfortably conservative.
+  ev_pv_export_detect_kw:
+    name: "PV export detect threshold"
+    initial: 1.0           # sustained export at/beyond this = candidate sell
+    min: 0.3
+    max: 5.0
+    step: 0.1
+    unit_of_measurement: "kW"
+    icon: mdi:transmission-tower-export
+  ev_pv_export_sustain_seconds:
+    name: "PV export sustain time"
+    initial: 120           # 60 s already excludes measured balancing pulses
+    min: 30
+    max: 600
+    step: 10
+    unit_of_measurement: "s"
+    icon: mdi:timer-sand-complete
+  # Sell-price logic mirrors the winter ranking, inverted: defer only when the
+  # current slot is among the top-X highest of the local day AND above the
+  # grid-premium floor (buying always costs the ~5 c/kWh grid fee, so selling
+  # below it to buy back later is a guaranteed loss).
+  ev_pv_sell_price_floor_cents:
+    name: "PV sell price floor (grid premium)"
+    initial: 5.0
+    min: 0.0
+    max: 20.0
+    step: 0.5
+    unit_of_measurement: "c/kWh"
+    icon: mdi:cash-lock
+  ev_pv_sell_rank_slots:
+    name: "PV sell rank slots (top-X of day)"
+    initial: 12            # 12 × 15 min = top 3 h of the day count as sell slots
+    min: 1
+    max: 48
+    step: 1
+    unit_of_measurement: "slots"
+    icon: mdi:podium-gold
+  ev_pv_nordpool_max_age_hours:
+    name: "PV Nord Pool ranking max age"
+    initial: 2             # shared ranking older than this → price gates off
+    min: 1
+    max: 24
+    step: 1
+    unit_of_measurement: "h"
+    icon: mdi:clock-alert-outline
+  # Tomorrow's evening-target price signal: tomorrow counts as "expensive"
+  # when its local-day MEAN price meets this — raises tonight's battery target.
+  ev_pv_tomorrow_price_high_cents:
+    name: "PV tomorrow price-high threshold (mean)"
+    initial: 10.0
+    min: 2.0
+    max: 50.0
+    step: 0.5
+    unit_of_measurement: "c/kWh"
+    icon: mdi:cash-clock
+
+  # v1.3 — FMI forecast source
+  ev_pv_fmi_max_age_hours:
+    name: "PV FMI forecast max age"
+    initial: 6             # issued_at older than this → fall back to Solcast
+    min: 1
+    max: 24
+    step: 1
+    unit_of_measurement: "h"
+    icon: mdi:clock-alert-outline
+  ev_pv_daylight_hours_remaining:
+    name: "PV daylight hours remaining (fallback)"
+    initial: 4             # only used if sun.sun next_setting unavailable
+    min: 0
+    max: 20
+    step: 1
+    unit_of_measurement: "h"
+    icon: mdi:weather-sunset-down

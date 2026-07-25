@@ -1,0 +1,25 @@
+# =============================================================================
+# EV Charging — Guest Charge Opt-In (fail-safe default fix)
+# Add alongside ev_mapping_helpers.yaml.
+#
+# An unassigned charger (input_select.ev_chargerN_car = "None") no longer
+# charges by default — see evaluator.js. This toggle is the explicit,
+# deliberate opt-in for a genuine unknown-guest-car situation, kept
+# separate from assignment so it can never be flipped on as a silent side
+# effect of reassigning the OTHER charger's car.
+#
+# Leave OFF unless you actually have an unrecognised car you want to
+# charge without a schedule right now. Off is the fail-safe default.
+# =============================================================================
+
+input_boolean:
+
+  ev_charger1_guest_charge:
+    name: "Charger 1 — allow guest charging"
+    icon: mdi:account-question
+    initial: off
+
+  ev_charger2_guest_charge:
+    name: "Charger 2 — allow guest charging"
+    icon: mdi:account-question
+    initial: off
