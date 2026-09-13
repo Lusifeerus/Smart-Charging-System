@@ -214,6 +214,8 @@ Reservations are 6 A rather than a fair share by decision: the running car yield
 
 **`lb_hold` vs `lb_wants_stop`.** `lb_wants_stop` means "no room"; `lb_hold` means "not yet allocated — do not release". The hold exists because the coordinator only sees the evaluator's `schedulerAllows` one cycle late (it runs before the evaluator): at a slot boundary the plan flips, the evaluator holds the charger for one cycle, the coordinator carves room, then releases. Without it the release would land on a saturated pool a minute before the running car has been reduced. Cost: one 60 s cycle at every slot start.
 
+**A deadband sits in front of the reactive formula.** gridMax hovering at the 35 A line made a charger at its cap dither 16→15→16 every ~12 minutes all night (2026-09-12 log). The coordinator now sheds only at headroom ≤ −1 A and grows only at ≥ +2 A (`LB_SHED_AT_A` / `LB_RESTORE_AT_A`); in between, running chargers hold their draw. The fuse guard is unaffected.
+
 **Shared overload is shed by priority, not twice.** v1 applied the full negative headroom to each running charger, so a 12 A house step against 12+12 A charging computed 1 A for both and stopped both for 10 minutes. Now the excess is taken from the non-priority charger down to 6 A, then the priority one down to 6 A, then the non-priority off, then the priority — 12+12 with a 12 A step settles at 7+6, no stop.
 
 `chargerN.allocatedAmp` (fed to the planner) is the charger's **sustainable** share of the pool, not the 6 A start value — planning slot energy at 6 A would roughly triple `slots_needed` for every parked car.
