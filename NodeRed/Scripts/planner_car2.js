@@ -24,10 +24,75 @@ if (!Array.isArray(slots) || slots.length === 0) return null;
 
 // ---- HA inputs ----
 const socEnt = global.get("homeassistant.homeAssistant.states['sensor.car2_battery_soc']") || {};   // CHANGE ME: your Car 2 SoC sensor
-const soc = Number(socEnt.state);
+
+// ---- SoC resolution: live → last known good → configured fallback ----
+// AVAILABILITY IS REPORTED, NEVER BLOCKING (v1.6). This used to
+// `return null` on a non-numeric sensor. That was a silent, indefinite
+// stall for three compounding reasons:
+//
+//   1. Unlike a stale reading, an unavailable one does NOT self-correct
+//      when the car is driven. The usual cause is expired cloud API auth,
+//      which needs a human. Nothing in the loop can end it.
+//   2. "The previous allowed_map keeps executing" — the justification for
+//      the skip — stopped being true when the expired-slot filter landed.
+//      The frozen map's slots fall into the past, the evaluator matches
+//      none of them, and it decays to no charging at all rather than to
+//      yesterday's schedule.
+//   3. Nothing caught it. `last_updated` RESETS when a sensor goes
+//      unavailable, so the staleness sensor read ~0 h old and reported
+//      healthy while there was no data whatsoever.
+//
+// Same self-sealing shape as the age guard removed in v1.5, one step worse.
+// Planning from a remembered value costs at worst a mis-sized plan; planning
+// from nothing costs the whole charge.
+//
+// The last-good snapshot and the outage clock are HA helpers maintained by
+// ev_strategy.py — deliberately not flow context, which is memory-only and
+// is lost on exactly the Node-RED restart that happens mid-outage, when the
+// cached value is the only thing still charging the car.
+let soc = Number(socEnt.state);
+let soc_source = "live";
+let soc_unavailable_min = null;
+
 if (!Number.isFinite(soc)) {
-    node.warn("Planner car2: SoC sensor unavailable — skipping run");
-    return null;
+    const sinceStr = String(global.get(
+        "homeassistant.homeAssistant.states['input_datetime.ev_car2_soc_unavailable_since'].state"
+    ));
+    const sinceTs = Date.parse(sinceStr.replace(" ", "T"));
+    // Epoch is the "not currently unavailable" sentinel written by pyscript.
+    if (Number.isFinite(sinceTs) && sinceTs > 0) {
+        soc_unavailable_min = Math.round((Date.now() - sinceTs) / 60000);
+    }
+    const outFor = (soc_unavailable_min != null) ? soc_unavailable_min + " min" : "unknown duration";
+
+    // -1 is the "never recorded" sentinel. 0 % is a real SoC and must not
+    // double as "no data" — a genuinely flat car belongs on its own last
+    // known value, not on the blind fallback.
+    const lastGood = Number(global.get(
+        "homeassistant.homeAssistant.states['input_number.ev_car2_soc_last_good'].state"
+    ));
+
+    if (Number.isFinite(lastGood) && lastGood >= 0) {
+        soc = lastGood;
+        soc_source = "last_good";
+        node.warn(`Planner car2: SoC sensor unavailable for ${outFor} — planning from last known ${soc}%`);
+    } else {
+        // Cold start with a dead integration: no live reading, nothing
+        // cached. Now we are genuinely guessing, and the error directions
+        // are NOT symmetric — over-requesting buys slots that cost money,
+        // under-requesting leaves the car short against a hard deadline.
+        // So the fallback is biased LOW on purpose. It is a helper because
+        // the right value depends on how the household actually drives.
+        soc = Number(global.get(
+            "homeassistant.homeAssistant.states['input_number.ev_car2_soc_fallback'].state"
+        ));
+        soc_source = "fallback";
+        if (!Number.isFinite(soc)) {
+            soc = 40;                 // helper missing → still never block
+            soc_source = "fallback_default";
+        }
+        node.warn(`Planner car2: SoC sensor unavailable for ${outFor} and no cached reading — planning from fallback ${soc}%`);
+    }
 }
 // Freshness: REPORTED, never blocking (v1.5). The car's SoC sensor
 // publishes only on change, so a parked car's reading legitimately ages
@@ -230,7 +295,15 @@ for (const slot of slots) {
 // Independent of charging mode and price: below EMERGENCY_MIN_SOC the car
 // charges in every slot until the floor is reached. The minimal/normal/trip
 // selection only sets the price-optimised target and never bypasses pricing.
-if (EMERGENCY_MIN_SOC > 0 && soc < EMERGENCY_MIN_SOC) {
+//
+// LIVE READINGS ONLY (v1.6). An emergency floor is a claim about the battery
+// RIGHT NOW, and a remembered value is not evidence of now. Worse, it cannot
+// self-terminate: a cached 0 % with a dead sensor would allow every slot at
+// any price, indefinitely, with nothing able to clear it until a human fixes
+// the integration. Little is lost by gating it — a genuinely low last-known
+// SoC already drives slots_needed high enough on the ordinary price-optimised
+// path above, which stays bounded by the target.
+if (EMERGENCY_MIN_SOC > 0 && soc_source === "live" && soc < EMERGENCY_MIN_SOC) {
     for (const slot of slots) allowedMap[String(slot.ts)] = true;
 }
 
@@ -241,6 +314,8 @@ msg.payload = {
     car: 2,
     allowed_map: allowedMap,
     soc,
+    soc_source,
+    soc_unavailable_min,
     soc_age_h,
     soc_stale,
     target_soc,
