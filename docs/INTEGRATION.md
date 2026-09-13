@@ -189,7 +189,7 @@ Configuration: `ev_fuse_guard_trip_a` / `_release_a` / `_trip_seconds` / `_hold_
 | PV Eco Status Publisher | `health.ts`, tracker command age, Kotiakku data age | health block in MQTT payload |
 | pyscript | `sensor.ev_strategy_heartbeat`, updated every minute | new sensor |
 | Fuse Guard | `binary_sensor.ev_fuse_guard` (state + `ts`/`blind` attributes) | already existed, now consumed |
-| SoC watchdog | `binary_sensor.ev_carN_soc_stale`, `binary_sensor.ev_chargerN_mapping_mismatch` | see [SoC Staleness Handling](#soc-staleness-handling) |
+| SoC watchdog | `binary_sensor.ev_carN_soc_stale`, `binary_sensor.ev_chargerN_mapping_mismatch` | see [SoC Staleness Handling](#soc-staleness--availability-handling) |
 
 ### Mode-aware rules
 
@@ -207,11 +207,28 @@ The common card shows nothing when `ok` — silence is the design goal, not a mi
 
 ---
 
-## SoC Staleness Handling
+## SoC Staleness & Availability Handling
 
-Two complementary mechanisms, split by what's actually detectable — and a
-hard-won distinction between them: only one of the two should ever *block*
-anything.
+Three complementary mechanisms, split by what's actually detectable — and a
+hard-won distinction between them: **none of the three should ever *block*
+planning.** Every time one of them did, the result was a silent, self-sealing
+stall rather than the safety it was meant to provide.
+
+Two quantities get conflated constantly and must not be:
+
+| | Question | Large value means |
+|---|---|---|
+| **A — idle age** | How long since the SoC *value* changed? | Usually nothing. The sensor is change-driven; a parked car keeps its reading. |
+| **B — outage duration** | How long since there was *any* valid reading? | Always bad. Almost always expired cloud API auth. |
+
+`last_updated` measures A, and **only while the sensor is readable**. Going
+numeric → `unavailable` is itself a state change, so `last_updated` *resets at
+the exact moment the data stops*. Pre-v1.6 the staleness sensor therefore read
+~0 h old and reported `ok` straight through a total outage — while the
+planners refused to run, the previous `allowed_map` decayed past its slots, the
+car did not charge for days, and the card showed a bare `—`. B needs the
+valid→invalid transition to be remembered, which is what the availability
+resolver does.
 
 **Freshness — reported, never blocking (v1.5).** A reading older than
 `ev_soc_max_age_hours` (default 26 h) is *visible* everywhere it matters
@@ -227,6 +244,36 @@ change-driven, not polling — "old" means "the car hasn't moved", not "the
 value is wrong" — so trusting it and letting the next charge naturally
 refresh it is both safer and simpler than refusing to plan. See
 `planner_car1.js` / `planner_car2.js` for the full reasoning.
+
+**Availability — reported, never blocking (v1.6).** `ev_strategy.py`'s
+`_soc_availability_watch()` (minute cron + startup) maintains, per car:
+`input_number.ev_carN_soc_last_good` (last valid reading; `-1` = never
+recorded, deliberately *not* `0`, which is a real SoC) and
+`input_datetime.ev_carN_soc_unavailable_since` (stamped on the valid→invalid
+transition, reset to the `1970-01-01 00:00:00` sentinel on recovery). It
+publishes `binary_sensor.ev_carN_soc_unavailable` — debounced by
+`SOC_UNAVAILABLE_GRACE_MIN` (15 min) so an HA restart doesn't flap it —
+carrying `unavailable_min`, `last_good_soc`, and `planning_from`.
+
+State lives in **HA helpers, not pyscript module state or Node-RED flow
+context**: those are memory-only and are lost on exactly the restart that
+happens during a multi-day outage, which is the moment the cached value is the
+only thing still charging the car.
+
+The planners resolve SoC in three tiers and always produce a plan:
+
+| `soc_source` | When | Notes |
+|---|---|---|
+| `live` | Sensor returns a number | Normal path. Only tier that can trigger the emergency floor. |
+| `last_good` | Sensor down, a reading was cached | Costs at worst a mis-sized plan, which self-corrects on recovery. |
+| `fallback` | Sensor down, nothing ever cached | `input_number.ev_carN_soc_fallback`, default 40 %. Biased **low** on purpose: over-requesting buys slots that cost money, under-requesting leaves the car short against a hard deadline. |
+
+`EMERGENCY_MIN_SOC` is gated to `live` only. An emergency floor is a claim
+about the battery *right now*; a remembered value is not evidence of now, and
+worse, cannot self-terminate — a cached `0 %` with a dead sensor would allow
+every slot at any price indefinitely. A genuinely low last-known SoC already
+drives `slots_needed` high on the ordinary price-optimised path, which stays
+bounded by the target.
 
 **Frozen-while-charging watchdog** (pyscript, minute cron) — the only case
 where staleness is *provable* rather than merely suspicious, and the reason
@@ -302,6 +349,10 @@ A separate pyscript app (`surplus_sinks.py`, its own project, not part of this r
 | `sensor.ev_system_health` | Aggregated health (`ok`/`degraded`/`fault`) | — |
 | `sensor.ev_strategy_heartbeat` | pyscript liveness | — |
 | `binary_sensor.ev_car1_soc_stale` / `_car2_soc_stale` | Frozen-while-charging watchdog | — |
+| `binary_sensor.ev_car1_soc_unavailable` / `_car2_soc_unavailable` | SoC sensor outage detector (15 min grace) | — |
+| `input_number.ev_car1_soc_last_good` / `_car2_soc_last_good` | Last valid SoC (`-1` = never recorded) | -1 |
+| `input_datetime.ev_car1_soc_unavailable_since` / `_car2_...` | Outage clock (epoch = not out) | epoch |
+| `input_number.ev_car1_soc_fallback` / `_car2_soc_fallback` | Last-resort SoC estimate | 40 % |
 
 ---
 
