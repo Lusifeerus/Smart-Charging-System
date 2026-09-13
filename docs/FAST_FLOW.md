@@ -194,6 +194,30 @@ available = 35 A (GRID_LIMIT) - gridMax
 
 When only one car is active, it gets the full available pool. All amp values round to even numbers and clamp to [6 A, 16 A] or 0.
 
+### Draw-based allocation and start-safe reservations (v2)
+
+Shares are computed on the **pool** — `available + draw₁ + draw₂` — where `draw` is what a charger is actually delivering (its setpoint while running, 0 otherwise). v1 divided `available` alone and credited each charger with its *setpoint* as "what it is already using". Two consequences, both found by simulation before the first two-car winter:
+
+- A stopped charger (`frc=1`, delivering 0 A) still reports `amp=16`, so v1 held both parked setpoints at 16 A until the slot boundary and then released both at once — up to 32 A of EV on top of the winter house load, a fuse-guard trip at 30 s, a coordinator 10-minute cooldown, release, repeat. The old amp=0-on-disallowed scheme had masked this; frc-only ownership exposed it.
+- Two running chargers could never grow: 6+6 A with 11 A spare gave `share = 5 → 0`, and the ceiling kept both at 6.
+
+Each charger is classified per cycle from the **evaluator's commanded `frc`** (not the reported one — the Shelly derives `frc` from work state, so a finished car there looks like a scheduler stop) and the reported car state:
+
+| Phase | Meaning | Allocation |
+|---|---|---|
+| `running` | commanded `frc=0`, car charging, setpoint > 0 | Share of the pool; reactive formula on **draw** |
+| `stopped` | commanded `frc=1` | If the scheduler wants it: a **6 A reservation** carved from the pool, in priority order, only where every running charger can keep ≥ 6 A. Otherwise `lb_hold` and parked at 6 A |
+| `offered` | `frc=0`, car not charging, setpoint > 0 — complete, paused, preconditioning | No reservation; parked at 6 A so a spontaneous resume starts gently |
+| `bootstrap` | `frc=0`, setpoint 0 (WaitCar with nothing to draw) | As `stopped`+wanted, so it can receive an allocation |
+
+Reservations are 6 A rather than a fair share by decision: the running car yields the minimum for a safe start and one 60 s cycle rebalances on the real pool. The carve *can* reduce a running charger (down to 6 A) — the v1 ceiling protection is what made a second car unable to start against a saturated pool.
+
+**`lb_hold` vs `lb_wants_stop`.** `lb_wants_stop` means "no room"; `lb_hold` means "not yet allocated — do not release". The hold exists because the coordinator only sees the evaluator's `schedulerAllows` one cycle late (it runs before the evaluator): at a slot boundary the plan flips, the evaluator holds the charger for one cycle, the coordinator carves room, then releases. Without it the release would land on a saturated pool a minute before the running car has been reduced. Cost: one 60 s cycle at every slot start.
+
+**Shared overload is shed by priority, not twice.** v1 applied the full negative headroom to each running charger, so a 12 A house step against 12+12 A charging computed 1 A for both and stopped both for 10 minutes. Now the excess is taken from the non-priority charger down to 6 A, then the priority one down to 6 A, then the non-priority off, then the priority — 12+12 with a 12 A step settles at 7+6, no stop.
+
+`chargerN.allocatedAmp` (fed to the planner) is the charger's **sustainable** share of the pool, not the 6 A start value — planning slot energy at 6 A would roughly triple `slots_needed` for every parked car.
+
 A charger only receives an allocation if the Coordinator considers it **active**: `lmo === 3` (auto mode) and `car ∈ {2, 3, 4}` (charging, WaitCar, or paused/complete-recoverable). `car=1` (no car connected) is the only excluded state.
 
 > **`car=3` (WaitCar) inclusion is important, not incidental.** WaitCar is what the car reports when the charger is unlocked (`frc=0`) but currently offering 0 A — i.e. exactly the state a freshly-unlocked charger sits in before it has any allocation. Excluding it (an earlier version did) creates a bootstrap deadlock: the Coordinator only allocates current to an active charger, but a charger at amp=0 reports the very state that gets it excluded from ever receiving the allocation that would let it leave. If you ever see a charger stuck at 0 A despite `frc=0`, check this gate first.
