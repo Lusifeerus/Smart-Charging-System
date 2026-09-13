@@ -426,6 +426,8 @@ customElements.define('ev-charging-common-card', EvChargingCommonCard);
 // config:
 //   car: 1 or 2                             (required)
 //   soc_entity: sensor.car1_battery_soc    (required — CHANGE ME to your car's SoC sensor)
+//   soc_last_good_entity: input_number.ev_car1_soc_last_good      (default)
+//   soc_unavailable_entity: binary_sensor.ev_car1_soc_unavailable (default)
 //   status_entity: sensor.ev_charging_status  (default)
 //   car_name_entity: input_text.ev_car1_name  (default, based on car number)
 //   charger1_name: "go-e"                   (default "Charger 1")
@@ -443,6 +445,12 @@ class EvChargingCarCard extends HTMLElement {
       throw new Error('ev-charging-car-card: set soc_entity: <entity_id>');
     this._car            = Number(config.car);
     this._socEntity      = config.soc_entity;
+    // Written by ev_strategy.py's SoC availability resolver; used to keep the
+    // battery readout meaningful while the live sensor is down.
+    this._socLastGoodEntity = config.soc_last_good_entity
+                           || `input_number.ev_car${this._car}_soc_last_good`;
+    this._socUnavailEntity  = config.soc_unavailable_entity
+                           || `binary_sensor.ev_car${this._car}_soc_unavailable`;
     this._statusEntity   = config.status_entity   || 'sensor.ev_charging_status';
     this._carNameEntity  = config.car_name_entity || `input_text.ev_car${this._car}_name`;
     this._chargerNames   = { 1: config.charger1_name || 'Charger 1',
@@ -686,11 +694,45 @@ class EvChargingCarCard extends HTMLElement {
     if (name) this.querySelector('#carName').textContent = name;
 
     // SoC — read directly from configured entity
+    // Battery readout. A non-numeric SoC used to render as a bare '—',
+    // which reads as a cosmetic gap rather than the fault it is — the one
+    // place the family actually looks showed nothing while the planners
+    // were running on a remembered value (or, worse, on the blind
+    // fallback). Show the number being planned from, marked as an
+    // estimate, so the degradation is legible at a glance.
+    //
+    // Note the old test only excluded 'unavailable': an 'unknown' state
+    // rendered literally as "unknown %". Numeric-or-not is the right test.
     const socState = h.states[this._socEntity];
     const socVal   = socState?.state;
     const socUnit  = socState?.attributes?.unit_of_measurement || '%';
-    this.querySelector('#socVal').textContent =
-      (socVal != null && socVal !== 'unavailable') ? socVal + ' ' + socUnit : '—';
+    const socEl    = this.querySelector('#socVal');
+    const socLive  = socVal != null && socVal !== '' && Number.isFinite(Number(socVal));
+
+    if (socLive) {
+      socEl.textContent = socVal + ' ' + socUnit;
+      socEl.style.opacity = '';
+      socEl.title = '';
+    } else {
+      const lastGood = Number(h.states[this._socLastGoodEntity]?.state);
+      const mins = Number(
+        h.states[this._socUnavailEntity]?.attributes?.unavailable_min);
+      const forStr = Number.isFinite(mins)
+        ? (mins < 120 ? `${Math.round(mins)} min` : `${(mins / 60).toFixed(1)} h`)
+        : 'an unknown period';
+      // -1 is the never-recorded sentinel (see ev_health_package.yaml).
+      if (Number.isFinite(lastGood) && lastGood >= 0) {
+        socEl.textContent = '≈ ' + lastGood + ' ' + socUnit;
+        socEl.title = `SoC sensor unavailable for ${forStr}. `
+                    + `Charging is planned from the last known reading.`;
+      } else {
+        socEl.textContent = '≈ ? ' + socUnit;
+        socEl.title = `SoC sensor unavailable for ${forStr} and no reading `
+                    + `has been cached. Charging is planned from the `
+                    + `configured fallback estimate.`;
+      }
+      socEl.style.opacity = '0.55';
+    }
 
     // Status, amps, slot time — from MQTT status sensor
     const statusSensor = h.states[this._statusEntity];
