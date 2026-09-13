@@ -22,6 +22,14 @@
 const GRID_LIMIT = 35;   // Main fuse limit (A)
 const CHARGER_MAX = 16;   // go-e hardware max (A)
 const MIN_CURRENT = 6;    // go-e hardware min (A)
+// Reactive deadband (v2.1). gridMax hovering at GRID_LIMIT made a charger
+// at its cap dither 16→15→16 every ~12 min all night (confirmed in the
+// 2026-09-12 log) — a setpoint write per crossing, for a 1 A overshoot
+// inside meter noise. Shed only once the overshoot is a full amp; grow
+// only once there is a comfortable 2 A of room. 3 A of hysteresis; the
+// fuse guard (39 A / 30 s) is unaffected.
+const LB_SHED_AT_A    = -1;   // headroom ≤ this → shed
+const LB_RESTORE_AT_A =  2;   // headroom ≥ this → grow
 const SOC_DIFF_SEQ = 10;   // SoC gap → sequential mode
 const SOC_DIFF_WEIGHT = 5;  // SoC gap → weighted mode
 
@@ -385,10 +393,16 @@ function computeAllocation(available, priorityMode, soc1, soc2, ch) {
  * down to MIN, then non-priority off, then priority. Growth (positive
  * headroom) is offered to both; the allocation caps from the pool split
  * keep it from being double-counted.
+ *
+ * A deadband (LB_SHED_AT_A / LB_RESTORE_AT_A) sits in front of all of it:
+ * sub-amp overshoot at the limit is meter noise, not an overload.
  */
-function reactiveTargets(headroom, ch, prio) {
+function reactiveTargets(headroomRaw, ch, prio) {
     const r1 = ch[1].phase === PHASE.RUNNING, r2 = ch[2].phase === PHASE.RUNNING;
     const t = { 1: 0, 2: 0 };
+    // Deadband: inside (LB_SHED_AT_A, LB_RESTORE_AT_A) the grid is "at the
+    // line" — hold every running charger at its current draw.
+    const headroom = (headroomRaw > LB_SHED_AT_A && headroomRaw < LB_RESTORE_AT_A) ? 0 : headroomRaw;
     if (r1 !== r2) { const n = r1 ? 1 : 2; t[n] = ch[n].draw + headroom; return t; }
     if (!r1) return t;
     if (headroom >= 0) { t[1] = ch[1].draw + headroom; t[2] = ch[2].draw + headroom; return t; }
