@@ -40,6 +40,77 @@ input_number:
     unit_of_measurement: "h"
     icon: mdi:battery-clock
 
+  # ── SoC availability resolver (v1.6) ──────────────────────────────────
+  # State store for the last known good SoC and the outage clock. These are
+  # HELPERS rather than pyscript state or Node-RED flow context on purpose:
+  # both of those are memory-only and are lost on exactly the restart that
+  # happens during a multi-day integration outage — which is the moment the
+  # cached value is the only thing still keeping the car charging.
+  # Written by ev_strategy.py; read by ev_strategy.py, planner_car1.js and
+  # planner_car2.js.
+
+  ev_car1_soc_last_good:
+    name: "EV Car 1 last known SoC"
+    initial: -1            # -1 = never recorded. NOT 0: 0 % is a real SoC and
+    min: -1                # must not double as "no data", or a genuinely flat
+    max: 100               # car would be planned from the blind fallback.
+    step: 0.1
+    unit_of_measurement: "%"
+    icon: mdi:battery-heart-outline
+
+  ev_car2_soc_last_good:
+    name: "EV Car 2 last known SoC"
+    initial: -1
+    min: -1
+    max: 100
+    step: 0.1
+    unit_of_measurement: "%"
+    icon: mdi:battery-heart-outline
+
+  # Last-resort estimate: no live reading AND nothing ever cached (cold start
+  # into a dead integration). Biased LOW deliberately — the error directions
+  # are not symmetric. Over-requesting buys slots that cost money;
+  # under-requesting leaves the car short against a hard deadline.
+  ev_car1_soc_fallback:
+    name: "EV Car 1 SoC fallback estimate"
+    initial: 40
+    min: 0
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:battery-unknown
+
+  ev_car2_soc_fallback:
+    name: "EV Car 2 SoC fallback estimate"
+    initial: 40
+    min: 0
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:battery-unknown
+
+input_datetime:
+
+  # Set on the valid->invalid transition, reset to the epoch sentinel on
+  # recovery. This carries quantity B — how long since ANY valid reading —
+  # which `last_updated` cannot, because going numeric -> "unavailable" is
+  # itself a state change and RESETS last_updated at the exact moment the
+  # data stops. That is why the pre-v1.6 staleness sensor read ~0 h old and
+  # reported healthy through a total outage.
+  ev_car1_soc_unavailable_since:
+    name: "EV Car 1 SoC unavailable since"
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"      # epoch = not currently unavailable
+    icon: mdi:battery-off-outline
+
+  ev_car2_soc_unavailable_since:
+    name: "EV Car 2 SoC unavailable since"
+    has_date: true
+    has_time: true
+    initial: "1970-01-01 00:00:00"
+    icon: mdi:battery-off-outline
+
 template:
   - triggers:
       - trigger: time_pattern
@@ -156,9 +227,22 @@ template:
               {% endif %}
             {% endif %}
 
-            {# ── Car SoC: not-tracking-delivered-energy watchdog + idle age ── #}
+            {# ── Car SoC: unavailable / not-tracking / idle age ─────────── #}
+            {# Three DIFFERENT conditions, deliberately reported separately:  #}
+            {#   unavailable = no data at all (usually expired API auth)      #}
+            {#   not tracking = value frozen while energy is being delivered  #}
+            {#   idle age = value simply has not changed; benign when parked  #}
+            {# Pre-v1.6 the first was invisible: last_updated resets when a   #}
+            {# sensor drops out, so the age check read ~0 h and said "ok"     #}
+            {# through a total outage while the planners silently refused to  #}
+            {# run and the car did not charge for days.                       #}
             {% set max_soc_h = states('input_number.ev_soc_max_age_hours') | float(26) %}
             {% for n in [1, 2] %}
+              {% if is_state('binary_sensor.ev_car' ~ n ~ '_soc_unavailable', 'on') %}
+                {% set mins = state_attr('binary_sensor.ev_car' ~ n ~ '_soc_unavailable', 'unavailable_min') | float(0) %}
+                {% set src = state_attr('binary_sensor.ev_car' ~ n ~ '_soc_unavailable', 'planning_from') | default('fallback', true) %}
+                {% set ns.d = ns.d + ['Car ' ~ n ~ ' SoC sensor unavailable ' ~ (mins / 60) | round(1) ~ ' h — planning from ' ~ (src | replace('_', ' ')) ~ ' (check integration auth)'] %}
+              {% endif %}
               {% if is_state('binary_sensor.ev_car' ~ n ~ '_soc_stale', 'on') %}
                 {% set ns.d = ns.d + ['Car ' ~ n ~ ' SoC not tracking charge'] %}
               {% endif %}
