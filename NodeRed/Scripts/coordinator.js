@@ -13,8 +13,10 @@
  *   - Output 2 → HTTP request node for charger 2 amp
  *
  * frc is NOT written here. The evaluator owns frc exclusively.
- * This script only signals lb_wants_stop_1 / lb_wants_stop_2
- * into flow context for the evaluator to act on.
+ * This script only signals lb_wants_stop_N (no room) and lb_hold_N
+ * (not scheduled — do not release until room is carved) into flow
+ * context for the evaluator to act on. See the allocation model
+ * header below for why both exist.
  ************************************************************/
 
 const GRID_LIMIT = 35;   // Main fuse limit (A)
@@ -193,165 +195,274 @@ function allocEqual(available) {
 }
 
 /**
- * Compute both chargers' max allowed current for the given
- * priorityMode and SoC values.
+ * ═══ Allocation model (v2 — draw-based, start-safe) ═══════════════════
  *
- * c1Active / c2Active: whether each charger has a car actively charging.
- * c1Curr  / c2Curr:   current amp setpoints reported by each charger.
+ * Confirmed defect in v1 (found before the first two-car winter, not in
+ * production — but it would have been): the reactive formula credited a
+ * charger with its reported amp SETPOINT as "what it is already using".
+ * That is only true while the charger is delivering. With frc=1 the
+ * charger delivers 0 A and still reports amp=16, so v1 held BOTH stopped
+ * chargers' setpoints at 16 A right up to the slot boundary, then the
+ * evaluator released both in the same tick: 32 A of EV on top of a
+ * winter house load, fuse guard trip at 30 s, coordinator severe-overload
+ * with a 10-minute cooldown, release, repeat. A 30 s on / 10 min off
+ * limit cycle through the cheapest slots of the night, with a ~54 A pulse
+ * into the main fuse every cycle. The old amp=0-on-disallowed scheme had
+ * masked this by accident; moving to frc-only ownership exposed it.
  *
- * For a single active charger the ceiling is CHARGER_MAX — the reactive
- * formula in calcCharger handles the correct value. No pre-splitting needed.
+ * Second v1 defect, same root: the two-charger split divided `available`
+ * — headroom AFTER the chargers' own draw — so two running chargers could
+ * never grow (6+6 with 11 A spare → share 5 → 0 → stuck).
  *
- * For two active chargers the ceiling is max(currentAmps, fairShare) so a
- * running charger is never stopped solely because available headroom dropped
- * below MIN_CURRENT. The fair-share term prevents an idle charger from
- * grabbing more than its allocation on startup.
+ * v2 model:
+ *   draw_i   what charger i is actually delivering (setpoint iff running)
+ *   pool     available + draw1 + draw2 — the current the chargers may
+ *            divide among themselves. Shares are computed on the pool.
+ *   A not-running charger the scheduler WANTS to run gets a MIN_CURRENT
+ *   reservation carved out of the pool (in priority order, only where it
+ *   fits without pushing a running charger below MIN_CURRENT). It starts
+ *   at 6 A; the next cycle rebalances on the real pool. A not-running
+ *   charger the scheduler does NOT want gets no reservation and an
+ *   `lb_hold` flag: the evaluator must not release it until room has
+ *   been carved — otherwise a release at a saturated pool lands on the
+ *   fuse guard before this loop can react.
  *
- * Returns { max1, max2 } — the cap for charger 1 and charger 2.
+ * Reservations are 6 A rather than a fair share by decision: the running
+ * car yields the minimum needed for a safe start, and one 60 s cycle of
+ * rebalancing is fast enough.
  */
-function computeAllocation(available, priorityMode, soc1, soc2, c1Active, c2Active, c1Curr, c2Curr) {
-    // Single-charger case: CHARGER_MAX ceiling, reactive formula does the rest
-    if (c1Active && !c2Active) return { max1: CHARGER_MAX, max2: 0 };
-    if (c2Active && !c1Active) return { max1: 0, max2: CHARGER_MAX };
-    // Neither active
-    if (!c1Active && !c2Active) return { max1: 0, max2: 0 };
 
-    // Both active — apply priority/SoC splitting with current-aware ceilings.
-    // ceiling(curr, share): a running charger keeps at least its current amps;
-    // an idle charger is limited to its fair share of available headroom.
-    function ceiling(curr, share) {
-        return Math.max(curr, clampAmp(share));
-    }
+const PHASE = Object.freeze({
+    INACTIVE:  "inactive",   // no car / lmo≠3 / PV-owned — excluded
+    RUNNING:   "running",    // commanded frc=0, car charging, setpoint>0
+    STOPPED:   "stopped",    // commanded frc=1 (scheduler / LB / fuse)
+    OFFERED:   "offered",    // commanded frc=0, car NOT charging, setpoint>0
+    BOOTSTRAP: "bootstrap",  // commanded frc=0, setpoint 0 — WaitCar w/ nothing to draw
+});
 
-    let max1 = CHARGER_MAX;
-    let max2 = CHARGER_MAX;
+/**
+ * Classify one charger. Uses the evaluator's COMMANDED frc from flow
+ * context rather than the reported one: the Shelly assembler derives frc
+ * from work_state, so a car that finished on the Shelly reports frc=1
+ * exactly like a scheduler stop, and the two must not be confused (a
+ * reservation carved for a full car starves the other one all night).
+ *
+ * OFFERED is the "car has an offer and is not taking it" bucket: complete,
+ * paused, preconditioning, or the first poll after a release. It gets no
+ * reservation, and its setpoint is parked at MIN_CURRENT so a spontaneous
+ * resume (e.g. after battery preconditioning) starts gently. That resume
+ * is the one path that can overshoot — by at most 6 A for one cycle.
+ */
+function classify(chargerN, state, active) {
+    if (!active) return { phase: PHASE.INACTIVE, draw: 0 };
+    const cmdFrc  = flow.get(`charger${chargerN}.frc`);
+    const frc     = Number.isFinite(Number(cmdFrc)) ? Number(cmdFrc) : Number(state.frc);
+    const car     = Number(state.car);
+    const amp     = Number.isFinite(Number(state.amp)) ? Number(state.amp) : 0;
+    if (frc === 1)             return { phase: PHASE.STOPPED,   draw: 0 };
+    if (car === 2 && amp > 0)  return { phase: PHASE.RUNNING,   draw: amp };
+    if (amp > 0)               return { phase: PHASE.OFFERED,   draw: 0 };
+    return                            { phase: PHASE.BOOTSTRAP, draw: 0 };
+}
 
-    if (priorityMode === "Manual Car 1" || priorityMode === "Manual Car 2") {
-        const car1Priority = (priorityMode === "Manual Car 1");
-        const pCurr = car1Priority ? c1Curr : c2Curr;
-        const nCurr = car1Priority ? c2Curr : c1Curr;
-        const pAlloc = ceiling(pCurr, available);
-        const nAlloc = ceiling(nCurr, available - Math.min(CHARGER_MAX, available));
-        max1 = car1Priority ? pAlloc : nAlloc;
-        max2 = car1Priority ? nAlloc : pAlloc;
+/** Which charger the current priority mode favours (1 or 2). */
+function priorityCharger(priorityMode, soc1, soc2) {
+    if (priorityMode === "Manual Car 1") return 1;
+    if (priorityMode === "Manual Car 2") return 2;
+    const m = getSocMode(soc1, soc2);
+    return (m === "seq2" || m === "w2" || m === "h1") ? 2 : 1;
+}
 
+/**
+ * Split a pool between two RUNNING chargers by priority mode.
+ * ceiling(draw, share): a running charger keeps at least its current draw
+ * so a dip in the pool never stops it outright — reduction below draw is
+ * the reactive formula's job, and only under real overload.
+ */
+function splitRunning(pool, priorityMode, soc1, soc2, d1, d2) {
+    const ceiling = (draw, share) => Math.max(draw, clampAmp(share));
+    const prioTake = Math.min(CHARGER_MAX, pool);
+    let max1, max2;
+    if (priorityMode === "Manual Car 1") {
+        max1 = ceiling(d1, pool); max2 = ceiling(d2, pool - prioTake);
+    } else if (priorityMode === "Manual Car 2") {
+        max1 = ceiling(d1, pool - prioTake); max2 = ceiling(d2, pool);
     } else {
-        // SoC Smart
-        const mode = getSocMode(soc1, soc2);
-
-        switch (mode) {
-            case "seq1":   // Car1 lower SoC → Car1 priority
-                max1 = ceiling(c1Curr, available);
-                max2 = ceiling(c2Curr, available - Math.min(CHARGER_MAX, available));
-                break;
-
-            case "seq2":   // Car2 lower SoC → Car2 priority
-                max1 = ceiling(c1Curr, available - Math.min(CHARGER_MAX, available));
-                max2 = ceiling(c2Curr, available);
-                break;
-
-            case "w1": {   // Car1 lower SoC → Car1 priority (60/40)
-                const { p, n } = allocWeighted(available);
-                max1 = ceiling(c1Curr, p); max2 = ceiling(c2Curr, n);
-                break;
-            }
-            case "w2": {   // Car2 lower SoC → Car2 priority (60/40)
-                const { p, n } = allocWeighted(available);
-                max1 = ceiling(c1Curr, n); max2 = ceiling(c2Curr, p);
-                break;
-            }
-
-            case "eq":
-            case "hb": {
-                const share = Math.floor(available / 2);
-                max1 = ceiling(c1Curr, share);
-                max2 = ceiling(c2Curr, share);
-                break;
-            }
-
-            case "h1":  // Car1 >90 → Car2 gets priority
-                max1 = ceiling(c1Curr, available - Math.min(CHARGER_MAX, available));
-                max2 = ceiling(c2Curr, available);
-                break;
-
-            case "h2":  // Car2 >90 → Car1 gets priority
-                max1 = ceiling(c1Curr, available);
-                max2 = ceiling(c2Curr, available - Math.min(CHARGER_MAX, available));
-                break;
+        switch (getSocMode(soc1, soc2)) {
+            case "seq1": case "h2":
+                max1 = ceiling(d1, pool); max2 = ceiling(d2, pool - prioTake); break;
+            case "seq2": case "h1":
+                max1 = ceiling(d1, pool - prioTake); max2 = ceiling(d2, pool); break;
+            case "w1": { const { p, n } = allocWeighted(pool); max1 = ceiling(d1, p); max2 = ceiling(d2, n); break; }
+            case "w2": { const { p, n } = allocWeighted(pool); max1 = ceiling(d1, n); max2 = ceiling(d2, p); break; }
+            default:   { const s = Math.floor(pool / 2);       max1 = ceiling(d1, s); max2 = ceiling(d2, s); }
         }
     }
+    return { 1: max1, 2: max2 };
+}
 
-    return { max1, max2 };
+/**
+ * Compute per-charger { max, hold, planAmp }.
+ *
+ *   max      allocation ceiling this cycle (0 = no room / not wanted)
+ *   hold     not running and not wanted → evaluator must not release
+ *   planAmp  what this charger could SUSTAIN — fed to the planner as
+ *            chargerN.allocatedAmp. Deliberately not the 6 A start value:
+ *            planning slot energy at 6 A would ~triple slots_needed for
+ *            every stopped car.
+ *
+ * ch[n] = { active, phase, draw, wanted }
+ */
+function computeAllocation(available, priorityMode, soc1, soc2, ch) {
+    const out = { 1: { max: 0, hold: false, planAmp: 0 },
+                  2: { max: 0, hold: false, planAmp: 0 } };
+    const a1 = ch[1].active, a2 = ch[2].active;
+    if (!a1 && !a2) return out;
+
+    const isRunning = n => ch[n].phase === PHASE.RUNNING;
+    const pool = available + ch[1].draw + ch[2].draw;
+
+    // ── Single active charger: flat CHARGER_MAX ceiling, as in v1. ──────
+    // A not-running one is pre-positioned by calcCharger at clampAmp(available).
+    if (a1 !== a2) {
+        const n = a1 ? 1 : 2;
+        const running = isRunning(n);
+        const wanted  = ch[n].wanted;
+        out[n].planAmp = CHARGER_MAX;
+        if (running)      { out[n].max = CHARGER_MAX; }
+        else if (wanted)  { out[n].max = (available >= MIN_CURRENT) ? CHARGER_MAX : 0; }
+        else              { out[n].max = 0; out[n].hold = true; }
+        return out;
+    }
+
+    // ── Both active ──────────────────────────────────────────────────────
+    // 1. Reservations for not-running, wanted chargers, priority first.
+    //    Fits iff every running charger can keep ≥ MIN_CURRENT after it.
+    const prio  = priorityCharger(priorityMode, soc1, soc2);
+    const order = prio === 1 ? [1, 2] : [2, 1];
+    const runningMin = [1, 2].reduce((s, n) => s + (isRunning(n) ? MIN_CURRENT : 0), 0);
+    let reserved = 0;
+    for (const n of order) {
+        if (isRunning(n)) continue;
+        if (!ch[n].wanted) { out[n].hold = true; continue; }   // parked, no room needed
+        if (ch[n].phase === PHASE.OFFERED) continue;            // has an offer, not taking it
+        if (pool - reserved - runningMin >= MIN_CURRENT) {
+            out[n].max = MIN_CURRENT; reserved += MIN_CURRENT;
+        }                                                       // else max stays 0 → wantsStop
+    }
+
+    // 2. Running chargers share what is left of the pool.
+    const R = pool - reserved;
+    if (isRunning(1) && isRunning(2)) {
+        const s = splitRunning(R, priorityMode, soc1, soc2, ch[1].draw, ch[2].draw);
+        out[1].max = s[1]; out[2].max = s[2];
+    } else for (const n of [1, 2]) {
+        if (!isRunning(n)) continue;
+        // The carve must be able to REDUCE a running charger — the ceiling
+        // protection is what defeated it in v1 — but never below MIN_CURRENT.
+        const carve = reserved > 0 ? Math.max(MIN_CURRENT, clampAmp(R)) : CHARGER_MAX;
+        out[n].max = Math.min(Math.max(ch[n].draw, clampAmp(R)), carve, CHARGER_MAX);
+    }
+
+    // 3. planAmp: sustainable share if both ran on the whole pool.
+    const plan = splitRunning(pool, priorityMode, soc1, soc2, 0, 0);
+    out[1].planAmp = isRunning(1) ? out[1].max : plan[1];
+    out[2].planAmp = isRunning(2) ? out[2].max : plan[2];
+    return out;
+}
+
+
+/**
+ * Reactive setpoint targets for RUNNING chargers.
+ *
+ * Lone charger: draw + headroom (v1 formula, on draw instead of setpoint).
+ *
+ * Two running chargers: v1 applied the full headroom to EACH, so a shared
+ * overload was shed twice. Simulated: 12+12 A running, home battery adds
+ * 12 A → headroom −11 → each computes 12−11=1 → both below MIN → both
+ * stop for 10 minutes, shedding 24 A where 11 was needed. Here the excess
+ * is shed in priority order: non-priority down to MIN, then priority
+ * down to MIN, then non-priority off, then priority. Growth (positive
+ * headroom) is offered to both; the allocation caps from the pool split
+ * keep it from being double-counted.
+ */
+function reactiveTargets(headroom, ch, prio) {
+    const r1 = ch[1].phase === PHASE.RUNNING, r2 = ch[2].phase === PHASE.RUNNING;
+    const t = { 1: 0, 2: 0 };
+    if (r1 !== r2) { const n = r1 ? 1 : 2; t[n] = ch[n].draw + headroom; return t; }
+    if (!r1) return t;
+    if (headroom >= 0) { t[1] = ch[1].draw + headroom; t[2] = ch[2].draw + headroom; return t; }
+    const p = prio, n = prio === 1 ? 2 : 1;
+    let vp = ch[p].draw, vn = ch[n].draw, rem = -headroom;
+    let take = Math.min(rem, Math.max(0, vn - MIN_CURRENT)); vn -= take; rem -= take;
+    take     = Math.min(rem, Math.max(0, vp - MIN_CURRENT)); vp -= take; rem -= take;
+    if (rem > 0) { rem -= vn; vn = 0; }        // non-priority off (cooldown applies)
+    if (rem > 0) { vp -= rem; }                // priority below MIN → hysteresis stops it
+    t[p] = vp; t[n] = vn;
+    return t;
 }
 
 /*************** Per-charger calculation ***************/
 
 /**
- * Given a charger's current state and its allocated max, compute
- * the new amp setpoint.
+ * Given a charger's classification and its allocation, compute the new
+ * amp setpoint.
  *
  * Returns { newAmp, wantsStop, didwestop, stopUntil }
  */
-function calcCharger(id, chargerState, myMax, storedState) {
+function calcCharger(id, cls, gridMax, alloc, wanted, storedState, reactiveBase) {
     let { didwestop, stopUntil } = storedState;
+    const draw   = cls.draw;
+    const myMax  = alloc.max;
+    const maxGrid = Number.isFinite(Number(gridMax)) ? Number(gridMax) : GRID_LIMIT;
+    const headroom = GRID_LIMIT - maxGrid;
 
-    // Coerce to numbers with safe defaults.
-    // requestedCurr: default 0 (assume charger is idle if unknown)
-    // maxGrid: default GRID_LIMIT (assume fully loaded if unknown — safer than 0
-    //          which would give 35A available and risk over-allocation)
-    const requestedCurr = Number.isFinite(Number(chargerState.amp))
-        ? Number(chargerState.amp) : 0;
-    const maxGrid = Number.isFinite(Number(chargerState.grid))
-        ? Number(chargerState.grid) : GRID_LIMIT;
-
-    // Grid-reactive calculation: how much headroom do we have right now?
-    // Formula: GRID_LIMIT - gridMax + requestedCurr
-    //   = available headroom + what the charger is already using
-    //   = total this charger can use given current grid state
-    let newValue = GRID_LIMIT - maxGrid + requestedCurr;
-    newValue = Math.floor(newValue);
-
-    // Clamp negative values to 0 (severe overload beyond charger's contribution)
-    if (newValue < 0) newValue = 0;
-
-    // Apply allocation ceiling from computeAllocation
-    if (newValue > myMax) newValue = myMax;
-
-    // If allocation gives nothing, stop immediately (priority decision, not grid)
-    if (myMax === 0) newValue = 0;
-
-    let wantsStop = (myMax === 0);
-
-    // Overload hysteresis
-    // NOTE: do NOT pre-clamp newValue to MIN_CURRENT here — that would make
-    // the hysteresis condition below unreachable (dead code). Instead, let
-    // the hysteresis handle the 1–5A range properly with a 10-minute cooldown.
-    if (didwestop === 0) {
-        if (newValue > 0 && newValue < MIN_CURRENT) {
-            // Charger can't operate below 6A — stop with cooldown to prevent
-            // rapid cycling while grid load hovers just under the threshold
-            newValue = 0;
-            wantsStop = true;
-            didwestop = 1;
-            stopUntil = Date.now() + 600000;
-        } else if (newValue === 0 && requestedCurr > 0 && myMax > 0) {
-            // Severe overload: grid so loaded that even with charger contributing
-            // requestedCurr, the reactive formula gives 0 — stop with cooldown
-            wantsStop = true;
-            didwestop = 1;
-            stopUntil = Date.now() + 600000;
-        }
+    let newValue;
+    if (cls.phase === PHASE.RUNNING) {
+        // Grid-reactive target from reactiveTargets(): draw + headroom for
+        // a lone charger; for two running chargers an overload is shed
+        // across both by priority rather than charged to each in full.
+        newValue = Math.floor(reactiveBase);
+        if (newValue < 0) newValue = 0;
+        if (newValue > myMax) newValue = myMax;
+    } else if (cls.phase === PHASE.OFFERED) {
+        // Car isn't taking its offer. Park at MIN so any resume is gentle.
+        newValue = MIN_CURRENT;
+    } else if (alloc.hold) {
+        // Stopped and not wanted. Parked; evaluator holds it.
+        newValue = MIN_CURRENT;
     } else {
-        // We previously stopped; wait out the cooldown
-        if ((GRID_LIMIT - maxGrid) < MIN_CURRENT) {
-            newValue = 0;
-            wantsStop = true;
+        // Stopped/bootstrap and wanted: PRE-POSITION at what it may start
+        // with. A 6 A reservation is taken as-is (room was carved this
+        // cycle). A single charger starts at real headroom, even-stepped.
+        newValue = (myMax === CHARGER_MAX) ? Math.min(myMax, clampAmp(headroom)) : myMax;
+    }
+
+    // wantsStop means "LB has no room for you", never "not scheduled" —
+    // that is lb_hold. Keeping them apart keeps the CSV logger honest.
+    let wantsStop = wanted && !alloc.hold && cls.phase !== PHASE.OFFERED && newValue === 0;
+
+    // Overload hysteresis — running chargers only; a parked one has
+    // nothing to shed and must not enter a cooldown for standing still.
+    if (cls.phase === PHASE.RUNNING) {
+        if (didwestop === 0) {
+            if (newValue > 0 && newValue < MIN_CURRENT) {
+                newValue = 0; wantsStop = true; didwestop = 1;
+                stopUntil = Date.now() + 600000;
+            } else if (newValue === 0 && draw > 0 && myMax > 0) {
+                wantsStop = true; didwestop = 1;
+                stopUntil = Date.now() + 600000;
+            }
+        }
+    }
+    if (didwestop === 1) {
+        // Cooldown: hold the stop until headroom exists AND the timer ran out.
+        if (headroom < MIN_CURRENT) {
+            newValue = 0; wantsStop = true;
         } else if (Date.now() >= stopUntil) {
-            didwestop = 0;      // Cooldown elapsed, let evaluator re-enable
-            stopUntil = 0;
+            didwestop = 0; stopUntil = 0;
         } else {
-            newValue = 0;
-            wantsStop = true;   // Still in cooldown
+            newValue = 0; wantsStop = true;
         }
     }
 
@@ -466,43 +577,44 @@ const c2Stored = {
 // Available current (grid headroom), using max phase
 const available = GRID_LIMIT - gridMax;
 
-// Allocate — pass current amp setpoints so running chargers are not
-// stopped when available headroom drops below MIN_CURRENT
-const c1Curr = (c1Active && c1State) ? (Number(c1State.amp) || 0) : 0;
-const c2Curr = (c2Active && c2State) ? (Number(c2State.amp) || 0) : 0;
+// Classify, then read what the evaluator decided LAST cycle for each
+// charger (it runs after us, off our output 3). One cycle stale by
+// construction: at a slot boundary the reservation lands one minute after
+// the plan flips, and the evaluator holds the charger for that minute.
+// Missing key (first boot) reads as "not wanted" and converges next cycle.
+const cls1 = classify(1, c1State, c1Active);
+const cls2 = classify(2, c2State, c2Active);
+const ch = {
+    1: { active: c1Active, phase: cls1.phase, draw: cls1.draw,
+         wanted: flow.get('charger1.schedulerAllows') === true },
+    2: { active: c2Active, phase: cls2.phase, draw: cls2.draw,
+         wanted: flow.get('charger2.schedulerAllows') === true },
+};
 
-const { max1, max2 } = computeAllocation(
-    available,
-    priorityModeCharger,
-    soc1,
-    soc2,
-    c1Active,
-    c2Active,
-    c1Curr,
-    c2Curr
-);
+const alloc = computeAllocation(available, priorityModeCharger, soc1, soc2, ch);
+const max1 = alloc[1].max, max2 = alloc[2].max;
+const rt = reactiveTargets(available, ch, priorityCharger(priorityModeCharger, soc1, soc2));
 
-// Per-charger calculation
-// Pass the charger's own grid reading for the reactive correction term,
-// but use gridMax for the allocation ceiling — they're independent concerns.
 let out1 = null, out2 = null;
 let r1 = null, r2 = null;      // kept for the diagnostics block below
 
 if (c1Active) {
-    r1 = calcCharger("c1", { amp: c1State.amp, grid: gridMax }, max1, c1Stored);
+    r1 = calcCharger("c1", cls1, gridMax, alloc[1], ch[1].wanted, c1Stored, rt[1]);
     flow.set('charger1.didwestop', r1.didwestop);
     flow.set('charger1.stopUntil', r1.stopUntil);
-    flow.set('charger1.allocatedAmp', r1.newAmp);          // fed back to planner
+    flow.set('charger1.allocatedAmp', alloc[1].planAmp);   // fed back to planner (sustainable, not start value)
     flow.set('lb_wants_stop_1', r1.wantsStop);
+    flow.set('lb_hold_1', alloc[1].hold);
     out1 = { url: `http://${CHARGER_IPS.c1}/api/set?amp=${r1.newAmp}` };
 }
 
 if (c2Active) {
-    r2 = calcCharger("c2", { amp: c2State.amp, grid: gridMax }, max2, c2Stored);
+    r2 = calcCharger("c2", cls2, gridMax, alloc[2], ch[2].wanted, c2Stored, rt[2]);
     flow.set('charger2.didwestop', r2.didwestop);
     flow.set('charger2.stopUntil', r2.stopUntil);
-    flow.set('charger2.allocatedAmp', r2.newAmp);          // fed back to planner
+    flow.set('charger2.allocatedAmp', alloc[2].planAmp);   // fed back to planner (sustainable, not start value)
     flow.set('lb_wants_stop_2', r2.wantsStop);
+    flow.set('lb_hold_2', alloc[2].hold);
     out2 = { url: `http://${CHARGER_IPS.c2}/api/set?amp=${r2.newAmp}` };
 }
 
@@ -522,7 +634,7 @@ const evalTrigger = { payload: "coordinator_done", _src: "coordinator" };
 // mapping resolution, charger-space SoCs, the priority translation, the
 // allocation, and each charger's overload/hysteresis outcome.
 const now = Date.now();
-function chargerDiag(active, state, maxA, r, stored, pvOwned) {
+function chargerDiag(active, state, maxA, r, stored, pvOwned, cls, a, wanted) {
     const fault = state ? faultInfo(state) : null;
     if (!active) {
         let reason;
@@ -536,7 +648,12 @@ function chargerDiag(active, state, maxA, r, stored, pvOwned) {
     return {
         active:          true,
         current_amp:     state.amp,
+        phase:           cls ? cls.phase : null,
+        draw_a:          cls ? cls.draw : null,
+        wanted:          !!wanted,
         allocated_max_a: maxA,
+        plan_amp:        a ? a.planAmp : null,
+        lb_hold:         a ? a.hold : null,
         new_amp:         r ? r.newAmp : null,
         lb_wants_stop:   r ? r.wantsStop : null,
         didwestop:       r ? r.didwestop : null,
@@ -551,8 +668,9 @@ evalTrigger.diag = {
     priority:  { selected: priorityMode, charger_space: priorityModeCharger },
     grid:      { max_phase_a: gridMax, limit_a: GRID_LIMIT, available_a: available },
     allocation:{ max1_a: max1, max2_a: max2 },
-    charger1:  chargerDiag(c1Active, c1State, max1, r1, c1Stored, c1PvOwned),
-    charger2:  chargerDiag(c2Active, c2State, max2, r2, c2Stored, c2PvOwned)
+    grid_pool: { pool_a: available + ch[1].draw + ch[2].draw },
+    charger1:  chargerDiag(c1Active, c1State, max1, r1, c1Stored, c1PvOwned, cls1, alloc[1], ch[1].wanted),
+    charger2:  chargerDiag(c2Active, c2State, max2, r2, c2Stored, c2PvOwned, cls2, alloc[2], ch[2].wanted)
 };
 
 // At-a-glance node status: allocation + stop flags, red when shedding

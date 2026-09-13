@@ -4,7 +4,15 @@
  *
  * Combines:
  *   - Scheduler gate  (allowed_slots from planner)
- *   - LB stop flag    (lb_wants_stop_N set by coordinator)
+ *   - LB stop flag    (lb_wants_stop_N set by coordinator — no room)
+ *   - LB hold flag    (lb_hold_N set by coordinator — not yet allocated)
+ *
+ * lb_hold exists so a release can never precede its allocation. The
+ * coordinator carves a 6 A reservation for a charger only once it sees
+ * this script's schedulerAllows flip to true — one cycle after the plan
+ * changes. Without the hold, the release would land on a saturated pool
+ * a minute before the running car has been reduced, and the fuse guard
+ * (39 A / 30 s) would trip both. Cost: one 60 s cycle at every slot start.
  *
  * frc=0 → normal operation (coordinator controls amp)
  * frc=1 → hard stop
@@ -117,6 +125,7 @@ flow.set('evaluator.noSlotSince', 0);
 // carNum:   which car's plan applies (null = unassigned, no plan)
 function evalCharger(chargerN, carNum) {
     const lbWantsStop = flow.get(`lb_wants_stop_${chargerN}`) || false;
+    const lbHold      = flow.get(`lb_hold_${chargerN}`) || false;
 
     if (carNum == null) {
         // Unassigned charger. FAIL-SAFE DEFAULT: do not charge.
@@ -149,8 +158,9 @@ function evalCharger(chargerN, carNum) {
             charging_mode:     chargingMode,
             guest:             true,
             guest_charge_allowed: guestChargeAllowed,
+            lb_hold:           lbHold,
             fuse_stop:         fuseStop,
-            frc:               (guestChargeAllowed && !lbWantsStop && !fuseStop) ? 0 : 1
+            frc:               (guestChargeAllowed && !lbWantsStop && !lbHold && !fuseStop) ? 0 : 1
         };
     }
 
@@ -207,13 +217,14 @@ function evalCharger(chargerN, carNum) {
         schedulerAllows = !!allowedMap[currentSlotTs];
     }
 
-    const frc = (schedulerAllows && !lbWantsStop && !fuseStop) ? 0 : 1;
+    const frc = (schedulerAllows && !lbWantsStop && !lbHold && !fuseStop) ? 0 : 1;
 
     return {
         slot_index:        idx,
         slot_ts:           slots[idx].ts,
         scheduler_allows:  schedulerAllows,
         lb_wants_stop:     lbWantsStop,
+        lb_hold:           lbHold,
         charging_mode:     chargingMode,
         strategy:          thisCarStrategy,
         pv_owned:          false,
