@@ -199,7 +199,15 @@ def _soc_raw(car_n):
 
 
 def _soc_age_hours(car_n):
-    """Age of the SoC reading in hours, or None if undeterminable."""
+    """IDLE age of the SoC reading in hours, or None if undeterminable.
+
+    This is quantity A only (how long since the value changed) and it is
+    meaningful ONLY while the sensor is readable. `last_updated` resets when
+    the sensor drops to "unavailable", so during an outage it reports ~0 and
+    means nothing — return None there and let the outage clock in
+    _soc_unavailable_minutes() carry quantity B instead."""
+    if _soc_raw(car_n) is None:
+        return None
     try:
         lu = state.get(CAR_SOC_SENSORS[car_n] + ".last_updated")
     except Exception:
@@ -232,6 +240,131 @@ def _current_soc(car_n):
     if age is not None and age > max_h:
         return None
     return v
+
+
+# ── SoC availability resolver (v1.6) ──────────────────────────────────────
+# A car SoC sensor can sit `unavailable` for DAYS. Expired cloud API auth is
+# the common cause and it does not self-correct: no amount of driving fixes
+# it, a human has to re-authenticate. That makes it a strictly worse version
+# of the stale-reading problem fixed in v1.5.
+#
+# WHY AGE-BASED DETECTION IS BLIND TO IT: numeric -> "unavailable" IS a state
+# change, so `last_updated` RESETS at the exact moment the data stops. The
+# staleness sensor then reads ~0 h old and reports healthy while there is no
+# data at all. Two different quantities were being conflated:
+#
+#   A  how long since the VALUE changed  — large is fine (parked car)
+#   B  how long since we had ANY valid reading — large is always bad
+#
+# `last_updated` measures neither once the sensor drops out. B needs someone
+# to remember the transition, which is what this block does.
+#
+# STORED IN HA HELPERS, not pyscript module state or Node-RED flow context:
+# those are memory-only and are lost on exactly the restart that happens
+# during a multi-day outage — which is when the cached value is the only
+# thing keeping the car charging. Helpers as the sole state store, per the
+# house convention.
+#
+# Written on TRANSITIONS only (valid->invalid, invalid->valid) plus a value
+# write when the reading actually moves, so this costs a handful of recorder
+# rows a day rather than one a minute.
+
+SOC_UNAVAILABLE_GRACE_MIN = 15   # ride out HA restarts and brief blips
+SOC_NEVER = "1970-01-01 00:00:00"   # input_datetime has no "unset" state;
+                                    # epoch is the explicit "not unavailable"
+                                    # sentinel. Never a real outage start.
+
+
+def _dt_helper(entity):
+    """Parse an input_datetime helper to datetime, or None for the sentinel."""
+    raw = _get(entity)
+    if raw in (None, SOC_NEVER):
+        return None
+    try:
+        return datetime.strptime(raw, "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        return None
+
+
+def _soc_unavailable_minutes(car_n):
+    """Minutes since the SoC sensor stopped returning a number, or None."""
+    since = _dt_helper(f"input_datetime.ev_car{car_n}_soc_unavailable_since")
+    if since is None:
+        return None
+    return max(0.0, (datetime.now() - since).total_seconds() / 60.0)
+
+
+def _soc_last_good(car_n):
+    """Last valid reading persisted by _soc_availability_watch, or None.
+
+    -1 is the 'never recorded' sentinel: 0 % is a real (if rare) SoC and must
+    not double as 'no data', which is the mistake that would put a genuinely
+    flat car on the fallback path instead of its own last-known value."""
+    raw = _get(f"input_number.ev_car{car_n}_soc_last_good")
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return None
+    return v if v >= 0 else None
+
+
+def _soc_availability_watch():
+    """Maintain the last-good snapshot and the outage clock for each car.
+
+    Idempotent and safe to call every minute: it writes only when validity
+    flips or the value actually moves."""
+    for car_n in (1, 2):
+        live = _soc_raw(car_n)
+        since_ent = f"input_datetime.ev_car{car_n}_soc_unavailable_since"
+        was_out = _dt_helper(since_ent) is not None
+
+        if live is not None:
+            prev = _soc_last_good(car_n)
+            if prev is None or abs(prev - live) >= 0.5:
+                input_number.set_value(
+                    entity_id=f"input_number.ev_car{car_n}_soc_last_good",
+                    value=round(live, 1))
+            if was_out:
+                log.warning(f"ev_strategy: car{car_n} SoC sensor recovered "
+                            f"after {_soc_unavailable_minutes(car_n):.0f} min")
+                input_datetime.set_datetime(entity_id=since_ent,
+                                            datetime=SOC_NEVER)
+        elif not was_out:
+            # Transition into the outage — stamp it once, here only.
+            input_datetime.set_datetime(
+                entity_id=since_ent,
+                datetime=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            log.warning(f"ev_strategy: car{car_n} SoC sensor went unavailable "
+                        f"— planners will fall back to the last known value")
+
+        # Publish the detector. Debounced so an HA restart does not flap it.
+        mins = _soc_unavailable_minutes(car_n)
+        on = mins is not None and mins >= SOC_UNAVAILABLE_GRACE_MIN
+        lg = _soc_last_good(car_n)
+        entity = f"binary_sensor.ev_car{car_n}_soc_unavailable"
+        attrs = {
+            "friendly_name": f"EV Car {car_n} SoC sensor unavailable",
+            "device_class": "problem",
+            "icon": "mdi:battery-off-outline",
+            "unavailable_min": round(mins, 0) if mins is not None else None,
+            "last_good_soc": lg,
+            # What the planners are actually computing from right now — the
+            # single most useful thing to see when the car charges oddly.
+            "planning_from": ("live" if mins is None
+                              else "last_good" if lg is not None
+                              else "fallback"),
+        }
+        # Publish unconditionally on the mapping-mismatch pattern: the entity
+        # must EXIST before the first fault, or the health template and the
+        # card silently reference a missing entity for the life of a healthy
+        # system and nobody notices it was never wired up. Refreshed every
+        # tick while on, because the duration attribute is what the card and
+        # the health summary actually display.
+        was = _get(entity)
+        if on:
+            state.set(entity, "on", attrs)
+        elif was != "off":
+            state.set(entity, "off", attrs)
 
 
 # ── Core evaluation ───────────────────────────────────────────────────────
@@ -372,6 +505,10 @@ def _heartbeat():
     for n in (1, 2):
         age = _soc_age_hours(n)
         attrs[f"car{n}_soc_age_h"] = round(age, 1) if age is not None else None
+        # Quantity B: None while the sensor is healthy, minutes once it is not.
+        out = _soc_unavailable_minutes(n)
+        attrs[f"car{n}_soc_unavailable_min"] = round(out, 0) if out is not None else None
+        attrs[f"car{n}_soc_last_good"] = _soc_last_good(n)
     state.set(
         "sensor.ev_strategy_heartbeat",
         datetime.now().astimezone().isoformat(),
@@ -381,6 +518,9 @@ def _heartbeat():
 
 @time_trigger("startup")
 def _on_startup():
+    # Before the heartbeat: an HA restart that happens DURING an outage must
+    # re-establish the outage clock from the restored helper, not lose it.
+    _soc_availability_watch()
     _heartbeat()
     _derive()
     # Derivation above only issues psm on a CHANGE; after a reboot the
@@ -532,6 +672,7 @@ def _soc_watchdog():
 @time_trigger("cron(* * * * *)")
 def _boost_watchdog():
     """Every-minute boost end-condition check (stateless, preheater pattern)."""
+    _soc_availability_watch()
     _heartbeat()
     _soc_watchdog()
     for car_n in (1, 2):
